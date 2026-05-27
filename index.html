@@ -30,6 +30,7 @@
   .info-value { font-size: 16px; font-weight: 700; color: #73018C; margin-top: 2px; }
   .info-value.green { color: #27AE60; }
   .info-value.red { color: #C0392B; }
+  .info-value.orange { color: #E67E22; }
 
   .linha { display: flex; justify-content: space-between; align-items: baseline; padding: 5px 0; }
   .linha-label { font-size: 13px; color: #555; }
@@ -48,13 +49,15 @@
   .margem { text-align: right; font-size: 12px; color: #666; margin-top: 4px; }
 
   label.field-label { display: block; font-size: 12px; color: #666; font-weight: 600; margin-top: 8px; margin-bottom: 4px; }
-  input[type="date"], input[type="text"] { width: 100%; padding: 11px; font-size: 15px; border: 1px solid #DDD; border-radius: 8px; font-family: inherit; background: #fff; color: #1A1A1A; }
+  input[type="date"], input[type="text"], select, textarea { width: 100%; padding: 11px; font-size: 15px; border: 1px solid #DDD; border-radius: 8px; font-family: inherit; background: #fff; color: #1A1A1A; }
+  textarea { min-height: 80px; resize: vertical; }
+  select { -webkit-appearance: none; appearance: none; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23666' d='M6 9L1 4h10z'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 12px center; padding-right: 32px; }
 
   .trab-card { border: 1px solid #DDD; border-radius: 8px; padding: 12px; margin-bottom: 8px; background: #fff; }
   .trab-card.selected { border: 2px solid #73018C; background: #F3E5F7; }
   .trab-nome { font-weight: 700; font-size: 14px; margin-bottom: 6px; }
-  .btn-row { display: flex; gap: 6px; }
-  .btn-toggle { flex: 1; padding: 9px; font-size: 12px; border-radius: 6px; cursor: pointer; font-weight: 600; border: 1px solid #CCC; background: #fff; color: #333; font-family: inherit; }
+  .btn-row { display: flex; gap: 6px; flex-wrap: wrap; }
+  .btn-toggle { flex: 1 1 auto; min-width: 80px; padding: 9px; font-size: 11px; border-radius: 6px; cursor: pointer; font-weight: 600; border: 1px solid #CCC; background: #fff; color: #333; font-family: inherit; }
   .btn-toggle.active { border: 2px solid #73018C; background: #73018C; color: #fff; }
 
   .btn-primary { width: 100%; background: #73018C; color: #fff; border: none; padding: 14px; border-radius: 8px; font-size: 14px; font-weight: 700; cursor: pointer; margin-top: 10px; font-family: inherit; }
@@ -65,8 +68,10 @@
   .lanc-desc { font-size: 13px; font-weight: 600; }
   .lanc-data { font-size: 11px; color: #888; margin-top: 2px; }
   .lanc-tipo { font-size: 10px; color: #73018C; font-weight: 700; text-transform: uppercase; }
+  .lanc-categoria { display: inline-block; font-size: 10px; padding: 2px 6px; border-radius: 4px; background: #F3E5F7; color: #73018C; font-weight: 600; margin-right: 6px; }
   .lanc-right { display: flex; align-items: center; gap: 10px; }
   .lanc-valor { font-size: 14px; font-weight: 700; color: #73018C; }
+  .lanc-valor.entrada { color: #27AE60; }
   .btn-remove { background: transparent; border: none; color: #C0392B; cursor: pointer; font-size: 22px; padding: 0 6px; line-height: 1; font-family: inherit; }
 
   .empreitada-form { background: #FAFAFA; border: 1px dashed #CCC; border-radius: 8px; padding: 14px; margin-bottom: 12px; }
@@ -87,22 +92,25 @@
   .equipe-item { display: flex; justify-content: space-between; align-items: center; padding: 10px 0; border-bottom: 1px solid #F0F0F0; }
   .btn-remove-trab { background: transparent; border: 1px solid #C0392B; color: #C0392B; cursor: pointer; font-size: 11px; padding: 6px 10px; border-radius: 6px; font-weight: 600; font-family: inherit; }
 
-  /* OBRA CARD - tela inicial */
   .obra-card { background: #fff; border-radius: 12px; padding: 16px; margin-bottom: 12px; border: 1px solid #E8E8E8; cursor: pointer; }
   .obra-card:active { background: #F9F9F9; }
   .obra-header-row { display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; margin-bottom: 10px; }
   .obra-nome { font-size: 16px; font-weight: 700; color: #1A1A1A; word-wrap: break-word; flex: 1; }
   .obra-cliente { font-size: 12px; color: #888; margin-top: 2px; }
+  .obra-prazo { font-size: 11px; color: #888; margin-top: 4px; }
   .obra-stats { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 8px; }
   .obra-stat-label { font-size: 10px; color: #888; letter-spacing: 0.5px; }
   .obra-stat-val { font-size: 14px; font-weight: 700; margin-top: 1px; }
   .badge { display: inline-block; font-size: 10px; padding: 3px 8px; border-radius: 20px; font-weight: 700; }
   .badge.purple { background: #F3E5F7; color: #73018C; }
+  .badge.green { background: #D4F4DD; color: #27AE60; }
+  .badge.orange { background: #FCE5CB; color: #E67E22; }
+  .badge.gray { background: #E8E8E8; color: #666; }
+  .badge.red { background: #FADBD8; color: #C0392B; }
 
   .footer { text-align: center; font-size: 11px; color: #999; margin-top: 20px; }
   .hidden { display: none; }
 
-  /* Modal */
   .modal-bg { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 100; display: none; align-items: center; justify-content: center; padding: 20px; }
   .modal-bg.show { display: flex; }
   .modal { background: #fff; border-radius: 12px; padding: 22px; max-width: 500px; width: 100%; max-height: 90vh; overflow-y: auto; }
@@ -110,6 +118,18 @@
   .modal-actions { display: flex; gap: 8px; margin-top: 14px; }
   .modal-actions button { flex: 1; }
   .btn-cancel { background: #fff; color: #555; border: 1px solid #CCC; padding: 12px; border-radius: 8px; font-size: 13px; font-weight: 600; cursor: pointer; font-family: inherit; }
+
+  .chart-container { padding: 10px 0; }
+  .chart-bar-wrapper { display: flex; align-items: flex-end; gap: 8px; height: 140px; margin-top: 10px; padding: 0 4px; border-bottom: 1px solid #E8E8E8; padding-bottom: 4px; }
+  .chart-bar-col { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 4px; }
+  .chart-bar { width: 100%; max-width: 32px; background: #73018C; border-radius: 4px 4px 0 0; transition: height 0.3s; min-height: 2px; }
+  .chart-bar-label { font-size: 10px; color: #888; font-weight: 600; }
+  .chart-bar-val { font-size: 9px; color: #73018C; font-weight: 700; }
+
+  .resumo-badges { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 8px; }
+
+  .backup-area { background: #FAFAFA; border: 1px dashed #CCC; border-radius: 8px; padding: 14px; margin-top: 10px; }
+  .backup-text { background: #fff; padding: 10px; border-radius: 6px; font-family: monospace; font-size: 11px; max-height: 120px; overflow-y: auto; word-break: break-all; border: 1px solid #DDD; }
 </style>
 </head>
 <body>
@@ -118,7 +138,6 @@
   <div class="footer">Dados salvos no seu dispositivo</div>
 </div>
 
-<!-- MODAL -->
 <div class="modal-bg" id="modal-bg" onclick="fecharModalSeFora(event)">
   <div class="modal" id="modal-content"></div>
 </div>
@@ -126,9 +145,23 @@
 <script>
   const KEY = 'asConstruction_obras_v1';
 
-  // ============ ESTADO ============
+  const CATEGORIAS_AVULSAS = [
+    { id: 'combustivel', nome: 'Combustível' },
+    { id: 'alimentacao', nome: 'Alimentação' },
+    { id: 'material', nome: 'Material' },
+    { id: 'ferramenta', nome: 'Ferramenta' },
+    { id: 'transporte', nome: 'Transporte' },
+    { id: 'outros', nome: 'Outros' }
+  ];
+
+  const STATUS_OBRA = [
+    { id: 'andamento', nome: 'Em andamento', cor: 'orange' },
+    { id: 'concluida', nome: 'Concluída', cor: 'green' },
+    { id: 'pausada', nome: 'Pausada', cor: 'gray' }
+  ];
+
   let estado = carregar();
-  let telaAtual = 'home'; // 'home' ou 'obra'
+  let telaAtual = 'home';
   let obraAtualId = null;
   let abaAtual = 'resumo';
   let selecaoDiaria = {};
@@ -138,10 +171,45 @@
       const raw = localStorage.getItem(KEY);
       if (raw) {
         const p = JSON.parse(raw);
-        return { obras: p.obras || [] };
+        return { obras: migrarObras(p.obras || []) };
       }
     } catch (e) {}
     return { obras: [] };
+  }
+
+  // Migra obras antigas para o novo formato sem perder dados
+  function migrarObras(obras) {
+    return obras.map(o => {
+      // Campos novos com defaults seguros
+      if (!o.status) o.status = 'andamento';
+      if (!o.dataInicio) o.dataInicio = '';
+      if (!o.dataPrevisao) o.dataPrevisao = '';
+      if (!o.nota) o.nota = '';
+      if (!o.recebimentos) o.recebimentos = [];
+
+      // Migra "gasolina" para "gastosAvulsos" preservando os dados
+      if (!o.gastosAvulsos) o.gastosAvulsos = [];
+      if (o.gasolina && o.gasolina.length > 0) {
+        o.gasolina.forEach(g => {
+          o.gastosAvulsos.push({
+            id: g.id,
+            data: g.data,
+            valor: g.valor,
+            categoria: 'combustivel',
+            descricao: 'Abastecimento (migrado)'
+          });
+        });
+        delete o.gasolina;
+      }
+
+      // Diárias antigas: garantir campo periodo
+      if (o.diarias) {
+        o.diarias.forEach(d => {
+          if (!d.periodo) d.periodo = 'completo';
+        });
+      }
+      return o;
+    });
   }
 
   function salvar() {
@@ -152,47 +220,56 @@
     }
   }
 
-  // ============ UTIL ============
   function brl(v) { return Number(v).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }); }
   function dateBR(iso) { if (!iso) return ''; const [y,m,d] = iso.split('-'); return d+'/'+m+'/'+y; }
   function hojeISO() { const d = new Date(); return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); }
   function escapeHtml(s) { return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'})[c]); }
   function parseNum(s) { const n = parseFloat(String(s).replace(/\./g,'').replace(',','.')); return isNaN(n) ? 0 : n; }
   function getObra(id) { return estado.obras.find(o => o.id === id); }
+  function getStatusInfo(id) { return STATUS_OBRA.find(s => s.id === id) || STATUS_OBRA[0]; }
+  function getCategoriaNome(id) { const c = CATEGORIAS_AVULSAS.find(x => x.id === id); return c ? c.nome : id; }
 
   function calcularObra(obra) {
     const totalDiarias = (obra.diarias || []).reduce((s,d) => s + Number(d.valor || 0), 0);
-    const totalGasolina = (obra.gasolina || []).reduce((s,g) => s + Number(g.valor || 0), 0);
+    const totalAvulsos = (obra.gastosAvulsos || []).reduce((s,g) => s + Number(g.valor || 0), 0);
     const totalEmp = (obra.empreitadas || []).reduce((s,e) => s + (e.pago ? Number(e.valor||0) : 0) + (e.bonusPago ? Number(e.bonus||0) : 0), 0);
-    const custoTotal = totalDiarias + totalGasolina + totalEmp;
+    const custoTotal = totalDiarias + totalAvulsos + totalEmp;
     const imposto = Number(obra.contrato || 0) * (Number(obra.impostoPct || 0) / 100);
     const lucro = Number(obra.contrato || 0) - custoTotal - imposto;
     const margem = obra.contrato > 0 ? (lucro / obra.contrato) * 100 : 0;
-    return { totalDiarias, totalGasolina, totalEmp, custoTotal, imposto, lucro, margem };
+    const totalRecebido = (obra.recebimentos || []).reduce((s,r) => s + Number(r.valor || 0), 0);
+    const saldoReceber = Number(obra.contrato || 0) - totalRecebido;
+    return { totalDiarias, totalAvulsos, totalEmp, custoTotal, imposto, lucro, margem, totalRecebido, saldoReceber };
   }
 
-  // ============ RENDER PRINCIPAL ============
   function render() {
     const root = document.getElementById('root');
     if (telaAtual === 'home') {
       root.innerHTML = renderHome();
-      attachHomeEvents();
     } else if (telaAtual === 'obra') {
       const obra = getObra(obraAtualId);
       if (!obra) { telaAtual = 'home'; return render(); }
       root.innerHTML = renderObra(obra);
-      attachObraEvents();
+      const dInput = document.getElementById('diaria-data');
+      if (dInput && !dInput.value) dInput.value = hojeISO();
+      const gInput = document.getElementById('avulso-data');
+      if (gInput && !gInput.value) gInput.value = hojeISO();
+      const rInput = document.getElementById('receb-data');
+      if (rInput && !rInput.value) rInput.value = hojeISO();
+    } else if (telaAtual === 'backup') {
+      root.innerHTML = renderBackup();
     }
   }
 
-  // ============ HOME ============
   function renderHome() {
     let totalGeralLucro = 0;
     let totalGeralContrato = 0;
+    let totalGeralRecebido = 0;
     estado.obras.forEach(o => {
       const c = calcularObra(o);
       totalGeralLucro += c.lucro;
       totalGeralContrato += Number(o.contrato || 0);
+      totalGeralRecebido += c.totalRecebido;
     });
 
     let html = '<div class="header">';
@@ -206,6 +283,7 @@
       html += '<div class="card resultado">';
       html += '<div class="card-title">RESUMO GERAL</div>';
       html += '<div class="linha"><div class="linha-label">Receita Total</div><div class="linha-valor">' + brl(totalGeralContrato) + '</div></div>';
+      html += '<div class="linha"><div class="linha-label">Recebido até hoje</div><div class="linha-valor" style="color:#27AE60">' + brl(totalGeralRecebido) + '</div></div>';
       html += '<div class="divider-purple">';
       html += '<div class="lucro-row"><div class="lucro-label">LUCRO PROJETADO TOTAL</div>';
       html += '<div class="lucro-valor ' + (totalGeralLucro >= 0 ? 'positive' : 'negative') + '">' + brl(totalGeralLucro) + '</div></div>';
@@ -213,6 +291,7 @@
     }
 
     html += '<button class="btn-primary" onclick="abrirModalNovaObra()">+ Adicionar Nova Obra</button>';
+    html += '<button class="btn-secondary" onclick="abrirBackup()">Backup / Restaurar Dados</button>';
 
     if (estado.obras.length === 0) {
       html += '<div class="card" style="margin-top: 16px;"><div class="empty">Nenhuma obra cadastrada ainda.<br>Clique em "Adicionar Nova Obra" para começar.</div></div>';
@@ -220,13 +299,22 @@
       html += '<div style="margin-top: 18px;">';
       estado.obras.forEach(o => {
         const c = calcularObra(o);
+        const status = getStatusInfo(o.status);
         html += '<div class="obra-card" onclick="abrirObra(\'' + o.id + '\')">';
         html += '<div class="obra-header-row">';
-        html += '<div><div class="obra-nome">' + escapeHtml(o.nome) + '</div>';
+        html += '<div style="flex:1; min-width:0;"><div class="obra-nome">' + escapeHtml(o.nome) + '</div>';
         if (o.cliente) html += '<div class="obra-cliente">' + escapeHtml(o.cliente) + '</div>';
+        if (o.dataInicio || o.dataPrevisao) {
+          let prazoTxt = '';
+          if (o.dataInicio) prazoTxt += 'Início: ' + dateBR(o.dataInicio);
+          if (o.dataPrevisao) prazoTxt += (prazoTxt ? ' | ' : '') + 'Previsão: ' + dateBR(o.dataPrevisao);
+          html += '<div class="obra-prazo">' + prazoTxt + '</div>';
+        }
         html += '</div>';
+        html += '<div style="display:flex; flex-direction:column; gap:4px; align-items:flex-end;">';
+        html += '<span class="badge ' + status.cor + '">' + status.nome + '</span>';
         html += '<span class="badge purple">' + (o.impostoPct || 0) + '% imp.</span>';
-        html += '</div>';
+        html += '</div></div>';
         html += '<div class="obra-stats">';
         html += '<div><div class="obra-stat-label">CONTRATO</div><div class="obra-stat-val" style="color: #73018C">' + brl(o.contrato || 0) + '</div></div>';
         html += '<div><div class="obra-stat-label">LUCRO PROJETADO</div><div class="obra-stat-val" style="color:' + (c.lucro >= 0 ? '#27AE60' : '#C0392B') + '">' + brl(c.lucro) + '</div></div>';
@@ -237,22 +325,31 @@
     return html;
   }
 
-  function attachHomeEvents() {}
-
-  // ============ OBRA ============
   function renderObra(obra) {
     const c = calcularObra(obra);
+    const status = getStatusInfo(obra.status);
     let html = '<div class="header">';
     html += '<div class="header-left">';
     html += '<div class="header-tag">' + (obra.cliente ? escapeHtml(obra.cliente).toUpperCase() : 'AS CONSTRUCTION') + '</div>';
     html += '<div class="header-title">' + escapeHtml(obra.nome) + '</div>';
-    html += '<div class="header-sub">Contrato: ' + brl(obra.contrato || 0) + '</div>';
+    html += '<div class="header-sub">Contrato: ' + brl(obra.contrato || 0) + ' | ' + status.nome + '</div>';
     html += '</div>';
     html += '<button class="btn-back" onclick="voltarHome()">← Voltar</button>';
     html += '</div>';
 
     html += '<div class="tabs">';
-    const abas = [['resumo','Resumo'],['diarias','Diárias'],['gasolina','Gasolina'],['empreitada','Empreitada'],['historico','Histórico'],['equipe','Equipe'],['editar','Editar']];
+    const abas = [
+      ['resumo','Resumo'],
+      ['diarias','Diárias'],
+      ['avulsos','Gastos'],
+      ['empreitada','Empreitada'],
+      ['recebimentos','Recebimentos'],
+      ['historico','Histórico'],
+      ['grafico','Gráfico'],
+      ['equipe','Equipe'],
+      ['notas','Notas'],
+      ['editar','Editar']
+    ];
     abas.forEach(a => {
       html += '<button class="tab ' + (abaAtual === a[0] ? 'active' : '') + '" onclick="trocarAba(\'' + a[0] + '\')">' + a[1] + '</button>';
     });
@@ -260,33 +357,32 @@
 
     if (abaAtual === 'resumo') html += renderAbaResumo(obra, c);
     else if (abaAtual === 'diarias') html += renderAbaDiarias(obra, c);
-    else if (abaAtual === 'gasolina') html += renderAbaGasolina(obra, c);
+    else if (abaAtual === 'avulsos') html += renderAbaAvulsos(obra, c);
     else if (abaAtual === 'empreitada') html += renderAbaEmpreitada(obra, c);
+    else if (abaAtual === 'recebimentos') html += renderAbaRecebimentos(obra, c);
     else if (abaAtual === 'historico') html += renderAbaHistorico(obra);
+    else if (abaAtual === 'grafico') html += renderAbaGrafico(obra);
     else if (abaAtual === 'equipe') html += renderAbaEquipe(obra);
+    else if (abaAtual === 'notas') html += renderAbaNotas(obra);
     else if (abaAtual === 'editar') html += renderAbaEditar(obra);
 
     return html;
   }
 
-  function attachObraEvents() {
-    const dInput = document.getElementById('diaria-data');
-    if (dInput && !dInput.value) dInput.value = hojeISO();
-    const gInput = document.getElementById('gas-data');
-    if (gInput && !gInput.value) gInput.value = hojeISO();
-  }
-
-  // ============ ABAS ============
   function renderAbaResumo(o, c) {
     let html = '<div class="card"><div class="card-title">CONTRATO</div>';
     html += '<div class="grid-2">';
     html += '<div><div class="info-label">Valor Total</div><div class="info-value">' + brl(o.contrato || 0) + '</div></div>';
-    html += '<div><div class="info-label">Entrada Recebida</div><div class="info-value green">' + brl(o.entrada || 0) + '</div></div>';
+    html += '<div><div class="info-label">Já Recebido</div><div class="info-value green">' + brl(c.totalRecebido) + '</div></div>';
+    html += '</div>';
+    html += '<div class="grid-2" style="margin-top:12px;">';
+    html += '<div><div class="info-label">Saldo a Receber</div><div class="info-value ' + (c.saldoReceber > 0 ? 'orange' : 'green') + '">' + brl(c.saldoReceber) + '</div></div>';
+    html += '<div><div class="info-label">Status</div><div class="info-value" style="font-size:14px;">' + getStatusInfo(o.status).nome + '</div></div>';
     html += '</div></div>';
 
     html += '<div class="card"><div class="card-title">CUSTOS ACUMULADOS</div>';
     html += '<div class="linha"><div class="linha-label">Diárias da equipe</div><div class="linha-valor">' + brl(c.totalDiarias) + '</div></div>';
-    html += '<div class="linha"><div class="linha-label">Gasolina</div><div class="linha-valor">' + brl(c.totalGasolina) + '</div></div>';
+    html += '<div class="linha"><div class="linha-label">Gastos Avulsos</div><div class="linha-valor">' + brl(c.totalAvulsos) + '</div></div>';
     html += '<div class="linha"><div class="linha-label">Empreitadas</div><div class="linha-valor">' + brl(c.totalEmp) + '</div></div>';
     html += '<div class="divider"><div class="linha bold"><div class="linha-label">Custo Total Operacional</div><div class="linha-valor">' + brl(c.custoTotal) + '</div></div></div>';
     html += '</div>';
@@ -314,10 +410,19 @@
         const sel = selecaoDiaria[t.id];
         html += '<div class="trab-card ' + (sel ? 'selected' : '') + '">';
         html += '<div class="trab-nome">' + escapeHtml(t.nome) + ' — ' + brl(t.diaria) + '/dia</div>';
-        html += '<div class="btn-row">';
-        html += '<button class="btn-toggle ' + (sel && !sel.marmita ? 'active' : '') + '" onclick="toggleSel(\'' + t.id + '\', false)">Sem marmita</button>';
-        html += '<button class="btn-toggle ' + (sel && sel.marmita ? 'active' : '') + '" onclick="toggleSel(\'' + t.id + '\', true, ' + (o.valorMarmita || 30) + ')">Com marmita (+' + brl(o.valorMarmita || 30) + ')</button>';
-        html += '</div></div>';
+        html += '<div style="font-size:11px; color:#666; margin-bottom:6px;">Período:</div>';
+        html += '<div class="btn-row" style="margin-bottom:6px;">';
+        html += '<button class="btn-toggle ' + (sel && sel.periodo === 'completo' ? 'active' : '') + '" onclick="toggleSel(\'' + t.id + '\', \'completo\')">Dia completo</button>';
+        html += '<button class="btn-toggle ' + (sel && sel.periodo === 'meio' ? 'active' : '') + '" onclick="toggleSel(\'' + t.id + '\', \'meio\')">Meio período</button>';
+        html += '</div>';
+        if (sel) {
+          html += '<div style="font-size:11px; color:#666; margin-bottom:6px;">Marmita:</div>';
+          html += '<div class="btn-row">';
+          html += '<button class="btn-toggle ' + (!sel.marmita ? 'active' : '') + '" onclick="toggleMarmita(\'' + t.id + '\', false)">Sem marmita</button>';
+          html += '<button class="btn-toggle ' + (sel.marmita ? 'active' : '') + '" onclick="toggleMarmita(\'' + t.id + '\', true)">Com marmita (+' + brl(o.valorMarmita || 30) + ')</button>';
+          html += '</div>';
+        }
+        html += '</div>';
       });
       html += '<button class="btn-primary" onclick="lancarDiaria()">Lançar Diária</button>';
     }
@@ -329,8 +434,9 @@
     } else {
       const ord = o.diarias.slice().sort((a,b) => b.data.localeCompare(a.data)).slice(0,30);
       ord.forEach(d => {
+        const periodoTxt = d.periodo === 'meio' ? ' (meio período)' : '';
         html += '<div class="lancamento">';
-        html += '<div><div class="lanc-desc">' + escapeHtml(d.trabNome) + (d.marmita ? ' + marmita' : '') + '</div>';
+        html += '<div><div class="lanc-desc">' + escapeHtml(d.trabNome) + (d.marmita ? ' + marmita' : '') + periodoTxt + '</div>';
         html += '<div class="lanc-data">' + dateBR(d.data) + '</div></div>';
         html += '<div class="lanc-right"><div class="lanc-valor">' + brl(d.valor) + '</div>';
         html += '<button class="btn-remove" onclick="removerDiaria(\'' + d.id + '\')">×</button></div></div>';
@@ -341,25 +447,47 @@
     return html;
   }
 
-  function renderAbaGasolina(o, c) {
-    let html = '<div class="card"><div class="card-title">LANÇAR ABASTECIMENTO</div>';
-    html += '<label class="field-label">Data</label><input type="date" id="gas-data">';
-    html += '<label class="field-label">Valor (R$)</label><input type="text" inputmode="decimal" id="gas-valor" placeholder="Ex.: 150,00">';
-    html += '<button class="btn-primary" onclick="lancarGasolina()">Lançar</button></div>';
+  function renderAbaAvulsos(o, c) {
+    let html = '<div class="card"><div class="card-title">LANÇAR GASTO AVULSO</div>';
+    html += '<label class="field-label">Data</label><input type="date" id="avulso-data">';
+    html += '<label class="field-label">Categoria</label><select id="avulso-categoria">';
+    CATEGORIAS_AVULSAS.forEach(cat => {
+      html += '<option value="' + cat.id + '">' + cat.nome + '</option>';
+    });
+    html += '</select>';
+    html += '<label class="field-label">Descrição (opcional)</label><input type="text" id="avulso-desc" placeholder="Ex.: Almoço da equipe">';
+    html += '<label class="field-label">Valor (R$)</label><input type="text" inputmode="decimal" id="avulso-valor" placeholder="Ex.: 50,00">';
+    html += '<button class="btn-primary" onclick="lancarAvulso()">Lançar Gasto</button></div>';
 
-    html += '<div class="card"><div class="card-title">ABASTECIMENTOS (' + (o.gasolina || []).length + ')</div>';
-    if (!o.gasolina || o.gasolina.length === 0) {
-      html += '<div class="empty">Nenhum abastecimento.</div>';
+    // Resumo por categoria
+    if (o.gastosAvulsos && o.gastosAvulsos.length > 0) {
+      const porCategoria = {};
+      o.gastosAvulsos.forEach(g => {
+        porCategoria[g.categoria] = (porCategoria[g.categoria] || 0) + Number(g.valor);
+      });
+      html += '<div class="card"><div class="card-title">POR CATEGORIA</div>';
+      Object.keys(porCategoria).forEach(catId => {
+        html += '<div class="linha"><div class="linha-label">' + getCategoriaNome(catId) + '</div><div class="linha-valor">' + brl(porCategoria[catId]) + '</div></div>';
+      });
+      html += '<div class="divider"><div class="linha bold"><div class="linha-label">TOTAL</div><div class="linha-valor">' + brl(c.totalAvulsos) + '</div></div></div>';
+      html += '</div>';
+    }
+
+    html += '<div class="card"><div class="card-title">GASTOS REGISTRADOS (' + (o.gastosAvulsos || []).length + ')</div>';
+    if (!o.gastosAvulsos || o.gastosAvulsos.length === 0) {
+      html += '<div class="empty">Nenhum gasto registrado.</div>';
     } else {
-      const ord = o.gasolina.slice().sort((a,b) => b.data.localeCompare(a.data));
+      const ord = o.gastosAvulsos.slice().sort((a,b) => b.data.localeCompare(a.data));
       ord.forEach(g => {
         html += '<div class="lancamento">';
-        html += '<div style="font-size: 13px;">' + dateBR(g.data) + '</div>';
+        html += '<div style="flex:1; min-width:0;">';
+        html += '<div><span class="lanc-categoria">' + getCategoriaNome(g.categoria) + '</span></div>';
+        if (g.descricao) html += '<div class="lanc-desc" style="margin-top:4px;">' + escapeHtml(g.descricao) + '</div>';
+        html += '<div class="lanc-data">' + dateBR(g.data) + '</div></div>';
         html += '<div class="lanc-right"><div class="lanc-valor">' + brl(g.valor) + '</div>';
-        html += '<button class="btn-remove" onclick="removerGasolina(\'' + g.id + '\')">×</button></div></div>';
+        html += '<button class="btn-remove" onclick="removerAvulso(\'' + g.id + '\')">×</button></div></div>';
       });
     }
-    html += '<div class="divider"><div class="linha bold"><div class="linha-label">TOTAL</div><div class="linha-valor">' + brl(c.totalGasolina) + '</div></div></div>';
     html += '</div>';
     return html;
   }
@@ -369,7 +497,7 @@
     html += '<div class="empreitada-form">';
     html += '<label class="field-label">Nome / Descrição</label><input type="text" id="emp-nome" placeholder="Ex.: Alessandro - rejunte piscinas">';
     html += '<label class="field-label">Valor (R$)</label><input type="text" inputmode="decimal" id="emp-valor" placeholder="Ex.: 13000,00">';
-    html += '<label class="field-label">Bônus por entrega no prazo (R$) — opcional</label><input type="text" inputmode="decimal" id="emp-bonus" placeholder="Ex.: 1000,00 (deixe vazio se não houver)">';
+    html += '<label class="field-label">Bônus por entrega no prazo (R$) — opcional</label><input type="text" inputmode="decimal" id="emp-bonus" placeholder="Ex.: 1000,00">';
     html += '<button class="btn-primary" onclick="adicionarEmpreitada()">Adicionar Empreitada</button>';
     html += '</div></div>';
 
@@ -400,27 +528,126 @@
     return html;
   }
 
+  function renderAbaRecebimentos(o, c) {
+    let html = '<div class="card"><div class="card-title">REGISTRAR RECEBIMENTO</div>';
+    html += '<label class="field-label">Data</label><input type="date" id="receb-data">';
+    html += '<label class="field-label">Descrição</label><input type="text" id="receb-desc" placeholder="Ex.: Entrada 20% | 1ª parcela | Final">';
+    html += '<label class="field-label">Valor (R$)</label><input type="text" inputmode="decimal" id="receb-valor" placeholder="Ex.: 19200,00">';
+    html += '<button class="btn-primary" onclick="lancarRecebimento()">Registrar</button></div>';
+
+    html += '<div class="card"><div class="card-title">RESUMO FINANCEIRO</div>';
+    html += '<div class="linha"><div class="linha-label">Valor do Contrato</div><div class="linha-valor">' + brl(o.contrato || 0) + '</div></div>';
+    html += '<div class="linha"><div class="linha-label">Já Recebido</div><div class="linha-valor" style="color:#27AE60">' + brl(c.totalRecebido) + '</div></div>';
+    html += '<div class="divider"><div class="linha bold"><div class="linha-label">Saldo a Receber</div><div class="linha-valor" style="color:' + (c.saldoReceber > 0 ? '#E67E22' : '#27AE60') + '">' + brl(c.saldoReceber) + '</div></div></div>';
+    html += '</div>';
+
+    html += '<div class="card"><div class="card-title">RECEBIMENTOS (' + (o.recebimentos || []).length + ')</div>';
+    if (!o.recebimentos || o.recebimentos.length === 0) {
+      html += '<div class="empty">Nenhum recebimento registrado.</div>';
+    } else {
+      const ord = o.recebimentos.slice().sort((a,b) => b.data.localeCompare(a.data));
+      ord.forEach(r => {
+        html += '<div class="lancamento">';
+        html += '<div style="flex:1; min-width:0;"><div class="lanc-desc">' + escapeHtml(r.descricao || 'Recebimento') + '</div>';
+        html += '<div class="lanc-data">' + dateBR(r.data) + '</div></div>';
+        html += '<div class="lanc-right"><div class="lanc-valor entrada">+ ' + brl(r.valor) + '</div>';
+        html += '<button class="btn-remove" onclick="removerRecebimento(\'' + r.id + '\')">×</button></div></div>';
+      });
+    }
+    html += '</div>';
+    return html;
+  }
+
   function renderAbaHistorico(o) {
     const hist = [];
-    (o.diarias || []).forEach(d => hist.push({data: d.data, tipo: 'Diária', desc: d.trabNome + (d.marmita ? ' + marmita' : ''), valor: d.valor, id: d.id, kind: 'diaria'}));
-    (o.gasolina || []).forEach(g => hist.push({data: g.data, tipo: 'Gasolina', desc: 'Abastecimento', valor: g.valor, id: g.id, kind: 'gas'}));
+    (o.diarias || []).forEach(d => {
+      const periodoTxt = d.periodo === 'meio' ? ' (meio)' : '';
+      hist.push({data: d.data, tipo: 'Diária', desc: d.trabNome + (d.marmita ? ' + marmita' : '') + periodoTxt, valor: d.valor, id: d.id, kind: 'diaria', sinal: -1});
+    });
+    (o.gastosAvulsos || []).forEach(g => {
+      hist.push({data: g.data, tipo: getCategoriaNome(g.categoria), desc: g.descricao || 'Gasto avulso', valor: g.valor, id: g.id, kind: 'avulso', sinal: -1});
+    });
+    (o.recebimentos || []).forEach(r => {
+      hist.push({data: r.data, tipo: 'Recebimento', desc: r.descricao || 'Recebimento', valor: r.valor, id: r.id, kind: 'receb', sinal: 1});
+    });
     hist.sort((a,b) => b.data.localeCompare(a.data));
 
-    let html = '<div class="card"><div class="card-title">HISTÓRICO (' + hist.length + ')</div>';
+    let html = '<div class="card"><div class="card-title">HISTÓRICO COMPLETO (' + hist.length + ')</div>';
     if (hist.length === 0) {
       html += '<div class="empty">Sem lançamentos.</div>';
     } else {
       hist.forEach(h => {
-        const removeAction = h.kind === 'diaria' ? 'removerDiaria' : 'removerGasolina';
+        let removeAction = '';
+        if (h.kind === 'diaria') removeAction = 'removerDiaria';
+        else if (h.kind === 'avulso') removeAction = 'removerAvulso';
+        else if (h.kind === 'receb') removeAction = 'removerRecebimento';
+
         html += '<div class="lancamento">';
-        html += '<div style="flex:1;"><div class="lanc-tipo">' + h.tipo + '</div>';
+        html += '<div style="flex:1; min-width:0;"><div class="lanc-tipo">' + h.tipo + '</div>';
         html += '<div class="lanc-desc">' + escapeHtml(h.desc) + '</div>';
         html += '<div class="lanc-data">' + dateBR(h.data) + '</div></div>';
-        html += '<div class="lanc-right"><div class="lanc-valor">' + brl(h.valor) + '</div>';
+        html += '<div class="lanc-right"><div class="lanc-valor ' + (h.sinal > 0 ? 'entrada' : '') + '">' + (h.sinal > 0 ? '+ ' : '') + brl(h.valor) + '</div>';
         html += '<button class="btn-remove" onclick="' + removeAction + '(\'' + h.id + '\')">×</button></div></div>';
       });
     }
     html += '</div>';
+    return html;
+  }
+
+  function renderAbaGrafico(o) {
+    // Agrupa gastos por semana
+    const todosGastos = [];
+    (o.diarias || []).forEach(d => todosGastos.push({data: d.data, valor: d.valor}));
+    (o.gastosAvulsos || []).forEach(g => todosGastos.push({data: g.data, valor: g.valor}));
+    (o.empreitadas || []).forEach(e => {
+      if (e.pago) todosGastos.push({data: hojeISO(), valor: e.valor});
+      if (e.bonusPago) todosGastos.push({data: hojeISO(), valor: e.bonus});
+    });
+
+    let html = '<div class="card"><div class="card-title">CUSTO ACUMULADO POR SEMANA</div>';
+
+    if (todosGastos.length === 0) {
+      html += '<div class="empty">Sem dados suficientes para gerar gráfico.</div>';
+    } else {
+      // Pega as últimas 8 semanas
+      const semanas = {};
+      todosGastos.forEach(g => {
+        const d = new Date(g.data + 'T12:00:00');
+        const dom = new Date(d);
+        dom.setDate(d.getDate() - d.getDay());
+        const key = dom.toISOString().split('T')[0];
+        semanas[key] = (semanas[key] || 0) + Number(g.valor);
+      });
+      const keysOrd = Object.keys(semanas).sort().slice(-8);
+      const valores = keysOrd.map(k => semanas[k]);
+      const max = Math.max.apply(null, valores) || 1;
+
+      html += '<div class="chart-container">';
+      html += '<div class="chart-bar-wrapper">';
+      keysOrd.forEach((k, idx) => {
+        const h = (valores[idx] / max) * 130;
+        const [y,m,d] = k.split('-');
+        html += '<div class="chart-bar-col">';
+        html += '<div class="chart-bar-val">' + brl(valores[idx]).replace('R$\xa0','') + '</div>';
+        html += '<div class="chart-bar" style="height: ' + h + 'px;"></div>';
+        html += '<div class="chart-bar-label">' + d + '/' + m + '</div>';
+        html += '</div>';
+      });
+      html += '</div>';
+      html += '<div style="font-size:11px; color:#888; text-align:center; margin-top:10px;">Início de cada semana (domingo)</div>';
+      html += '</div>';
+    }
+    html += '</div>';
+
+    // Totalizadores
+    const c = calcularObra(o);
+    html += '<div class="card"><div class="card-title">RESUMO DE CUSTOS</div>';
+    html += '<div class="linha"><div class="linha-label">Diárias</div><div class="linha-valor">' + brl(c.totalDiarias) + '</div></div>';
+    html += '<div class="linha"><div class="linha-label">Avulsos</div><div class="linha-valor">' + brl(c.totalAvulsos) + '</div></div>';
+    html += '<div class="linha"><div class="linha-label">Empreitadas</div><div class="linha-valor">' + brl(c.totalEmp) + '</div></div>';
+    html += '<div class="divider"><div class="linha bold"><div class="linha-label">TOTAL GASTO</div><div class="linha-valor">' + brl(c.custoTotal) + '</div></div></div>';
+    html += '</div>';
+
     return html;
   }
 
@@ -452,16 +679,59 @@
     return html;
   }
 
+  function renderAbaNotas(o) {
+    let html = '<div class="card"><div class="card-title">ANOTAÇÕES DA OBRA</div>';
+    html += '<div style="font-size:12px; color:#666; margin-bottom:10px;">Use este espaço para registrar qualquer observação importante: ocorrências, decisões, pendências, contatos do cliente, problemas, etc.</div>';
+    html += '<textarea id="nota-obra" placeholder="Digite suas anotações aqui...">' + escapeHtml(o.nota || '') + '</textarea>';
+    html += '<button class="btn-primary" onclick="salvarNota()">Salvar Anotações</button>';
+    html += '</div>';
+    return html;
+  }
+
   function renderAbaEditar(o) {
     let html = '<div class="card"><div class="card-title">EDITAR DADOS DA OBRA</div>';
     html += '<label class="field-label">Nome da obra</label><input type="text" id="ed-nome" value="' + escapeHtml(o.nome) + '">';
     html += '<label class="field-label">Cliente</label><input type="text" id="ed-cliente" value="' + escapeHtml(o.cliente || '') + '">';
     html += '<label class="field-label">Valor do contrato (R$)</label><input type="text" inputmode="decimal" id="ed-contrato" value="' + (o.contrato || 0) + '">';
-    html += '<label class="field-label">Entrada recebida (R$)</label><input type="text" inputmode="decimal" id="ed-entrada" value="' + (o.entrada || 0) + '">';
     html += '<label class="field-label">Imposto (%)</label><input type="text" inputmode="decimal" id="ed-imposto" value="' + (o.impostoPct || 0) + '">';
+
+    html += '<label class="field-label">Status da obra</label><select id="ed-status">';
+    STATUS_OBRA.forEach(s => {
+      html += '<option value="' + s.id + '"' + (o.status === s.id ? ' selected' : '') + '>' + s.nome + '</option>';
+    });
+    html += '</select>';
+
+    html += '<label class="field-label">Data de início</label><input type="date" id="ed-inicio" value="' + (o.dataInicio || '') + '">';
+    html += '<label class="field-label">Previsão de término</label><input type="date" id="ed-previsao" value="' + (o.dataPrevisao || '') + '">';
+
     html += '<button class="btn-primary" onclick="salvarEdicaoObra()">Salvar Alterações</button>';
     html += '<button class="btn-danger" onclick="excluirObra()" style="margin-top: 16px;">Excluir esta obra</button>';
     html += '</div>';
+    return html;
+  }
+
+  function renderBackup() {
+    const dadosJSON = JSON.stringify(estado, null, 2);
+    let html = '<div class="header">';
+    html += '<div class="header-left">';
+    html += '<div class="header-tag">AS CONSTRUCTION</div>';
+    html += '<div class="header-title">Backup / Restaurar</div>';
+    html += '</div>';
+    html += '<button class="btn-back" onclick="voltarHome()">← Voltar</button>';
+    html += '</div>';
+
+    html += '<div class="card"><div class="card-title">EXPORTAR DADOS</div>';
+    html += '<div style="font-size:13px; color:#555; margin-bottom:12px;">Copie o texto abaixo e salve em local seguro (WhatsApp salvo, e-mail, notas). Guarde periodicamente para evitar perda de dados.</div>';
+    html += '<button class="btn-primary" onclick="copiarBackup()" style="margin-bottom:10px;">📋 Copiar dados para área de transferência</button>';
+    html += '<div class="backup-area"><div class="backup-text" id="backup-text">' + escapeHtml(dadosJSON) + '</div></div>';
+    html += '</div>';
+
+    html += '<div class="card"><div class="card-title">RESTAURAR DADOS</div>';
+    html += '<div style="font-size:13px; color:#555; margin-bottom:12px;"><strong>ATENÇÃO:</strong> Restaurar vai SUBSTITUIR todos os dados atuais. Cole abaixo o backup salvo anteriormente.</div>';
+    html += '<textarea id="restore-text" placeholder="Cole aqui o conteúdo do backup..." style="min-height:120px; font-family: monospace; font-size:11px;"></textarea>';
+    html += '<button class="btn-primary" onclick="restaurarBackup()">Restaurar Dados</button>';
+    html += '</div>';
+
     return html;
   }
 
@@ -471,8 +741,9 @@
       '<label class="field-label">Nome da obra *</label><input type="text" id="nova-nome" placeholder="Ex.: Atmosphera">' +
       '<label class="field-label">Cliente</label><input type="text" id="nova-cliente" placeholder="Ex.: Complexo Atmosphera">' +
       '<label class="field-label">Valor do contrato (R$) *</label><input type="text" inputmode="decimal" id="nova-contrato" placeholder="Ex.: 96000">' +
-      '<label class="field-label">Entrada recebida (R$)</label><input type="text" inputmode="decimal" id="nova-entrada" placeholder="Ex.: 19200">' +
-      '<label class="field-label">Imposto (%)</label><input type="text" inputmode="decimal" id="nova-imposto" value="13" placeholder="Ex.: 13">' +
+      '<label class="field-label">Imposto (%)</label><input type="text" inputmode="decimal" id="nova-imposto" value="13">' +
+      '<label class="field-label">Data de início</label><input type="date" id="nova-inicio">' +
+      '<label class="field-label">Previsão de término</label><input type="date" id="nova-previsao">' +
       '<div class="modal-actions">' +
         '<button class="btn-cancel" onclick="fecharModal()">Cancelar</button>' +
         '<button class="btn-primary" style="margin-top:0" onclick="criarObra()">Criar Obra</button>' +
@@ -481,35 +752,31 @@
     document.getElementById('modal-bg').classList.add('show');
   }
 
-  function fecharModal() {
-    document.getElementById('modal-bg').classList.remove('show');
-  }
-
-  function fecharModalSeFora(ev) {
-    if (ev.target.id === 'modal-bg') fecharModal();
-  }
+  function fecharModal() { document.getElementById('modal-bg').classList.remove('show'); }
+  function fecharModalSeFora(ev) { if (ev.target.id === 'modal-bg') fecharModal(); }
 
   function criarObra() {
     const nome = document.getElementById('nova-nome').value.trim();
     if (!nome) { alert('Informe o nome da obra.'); return; }
     const contrato = parseNum(document.getElementById('nova-contrato').value);
     if (contrato <= 0) { alert('Informe o valor do contrato.'); return; }
-    const cliente = document.getElementById('nova-cliente').value.trim();
-    const entrada = parseNum(document.getElementById('nova-entrada').value);
-    const impostoPct = parseNum(document.getElementById('nova-imposto').value);
 
     const novaObra = {
       id: 'obra_' + Date.now(),
       nome: nome,
-      cliente: cliente,
+      cliente: document.getElementById('nova-cliente').value.trim(),
       contrato: contrato,
-      entrada: entrada,
-      impostoPct: impostoPct,
+      impostoPct: parseNum(document.getElementById('nova-imposto').value),
+      dataInicio: document.getElementById('nova-inicio').value,
+      dataPrevisao: document.getElementById('nova-previsao').value,
+      status: 'andamento',
       valorMarmita: 30,
+      nota: '',
       diarias: [],
-      gasolina: [],
+      gastosAvulsos: [],
       empreitadas: [],
       trabalhadores: [],
+      recebimentos: [],
       criadaEm: new Date().toISOString()
     };
     estado.obras.push(novaObra);
@@ -518,7 +785,6 @@
     abrirObra(novaObra.id);
   }
 
-  // ============ NAVEGAÇÃO ============
   function abrirObra(id) {
     obraAtualId = id;
     telaAtual = 'obra';
@@ -543,14 +809,71 @@
     window.scrollTo(0, 0);
   }
 
-  // ============ AÇÕES OBRA ============
-  function toggleSel(id, marmita, valorMarmita) {
+  function abrirBackup() {
+    telaAtual = 'backup';
+    render();
+    window.scrollTo(0, 0);
+  }
+
+  function copiarBackup() {
+    const txt = JSON.stringify(estado, null, 2);
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(txt).then(() => {
+        alert('Backup copiado! Cole em local seguro (WhatsApp, email, notas).');
+      }).catch(() => {
+        fallbackCopy(txt);
+      });
+    } else {
+      fallbackCopy(txt);
+    }
+  }
+
+  function fallbackCopy(txt) {
+    const ta = document.createElement('textarea');
+    ta.value = txt;
+    ta.style.position = 'fixed'; ta.style.left = '-9999px';
+    document.body.appendChild(ta);
+    ta.select();
+    try {
+      document.execCommand('copy');
+      alert('Backup copiado!');
+    } catch (e) {
+      alert('Não foi possível copiar automaticamente. Selecione o texto manualmente e copie.');
+    }
+    document.body.removeChild(ta);
+  }
+
+  function restaurarBackup() {
+    const txt = document.getElementById('restore-text').value.trim();
+    if (!txt) { alert('Cole o backup primeiro.'); return; }
+    if (!confirm('ATENÇÃO: Isto vai SUBSTITUIR todos os dados atuais. Confirma?')) return;
+    if (!confirm('Tem certeza? Esta ação não pode ser desfeita.')) return;
+    try {
+      const dados = JSON.parse(txt);
+      if (!dados.obras || !Array.isArray(dados.obras)) throw new Error('Formato inválido');
+      estado = { obras: migrarObras(dados.obras) };
+      salvar();
+      alert('Dados restaurados com sucesso!');
+      voltarHome();
+    } catch (e) {
+      alert('Erro ao restaurar: ' + e.message + '\n\nVerifique se o texto colado é um backup válido.');
+    }
+  }
+
+  // ============ AÇÕES ============
+  function toggleSel(id, periodo) {
     const atual = selecaoDiaria[id];
-    if (atual && atual.marmita === marmita) {
+    if (atual && atual.periodo === periodo) {
       delete selecaoDiaria[id];
     } else {
-      selecaoDiaria[id] = { marmita: marmita };
+      selecaoDiaria[id] = { periodo: periodo, marmita: atual ? atual.marmita : false };
     }
+    render();
+  }
+
+  function toggleMarmita(id, marmita) {
+    if (!selecaoDiaria[id]) return;
+    selecaoDiaria[id].marmita = marmita;
     render();
   }
 
@@ -565,13 +888,14 @@
     ids.forEach(id => {
       const t = obra.trabalhadores.find(x => x.id === id);
       if (!t) return;
-      const marmita = selecaoDiaria[id].marmita;
+      const sel = selecaoDiaria[id];
       const valorMarmita = Number(obra.valorMarmita || 30);
-      const valor = Number(t.diaria) + (marmita ? valorMarmita : 0);
+      const diariaBase = sel.periodo === 'meio' ? Number(t.diaria) / 2 : Number(t.diaria);
+      const valor = diariaBase + (sel.marmita ? valorMarmita : 0);
       obra.diarias.push({
         id: 'd_' + Date.now() + '_' + id + '_' + Math.random().toString(36).slice(2,6),
         data: dataInput, trabId: id, trabNome: t.nome,
-        diaria: t.diaria, marmita: marmita, valor: valor
+        diaria: t.diaria, marmita: sel.marmita, periodo: sel.periodo, valor: valor
       });
     });
     selecaoDiaria = {};
@@ -587,25 +911,51 @@
     render();
   }
 
-  function lancarGasolina() {
+  function lancarAvulso() {
     const obra = getObra(obraAtualId);
-    const dataInput = document.getElementById('gas-data').value;
+    const dataInput = document.getElementById('avulso-data').value;
     if (!dataInput) { alert('Informe a data.'); return; }
-    const valor = parseNum(document.getElementById('gas-valor').value);
+    const categoria = document.getElementById('avulso-categoria').value;
+    const descricao = document.getElementById('avulso-desc').value.trim();
+    const valor = parseNum(document.getElementById('avulso-valor').value);
     if (valor <= 0) { alert('Informe um valor válido.'); return; }
-    if (!obra.gasolina) obra.gasolina = [];
-    obra.gasolina.push({
-      id: 'g_' + Date.now() + '_' + Math.random().toString(36).slice(2,6),
-      data: dataInput, valor: valor
+    if (!obra.gastosAvulsos) obra.gastosAvulsos = [];
+    obra.gastosAvulsos.push({
+      id: 'av_' + Date.now() + '_' + Math.random().toString(36).slice(2,6),
+      data: dataInput, categoria: categoria, descricao: descricao, valor: valor
     });
     salvar();
     render();
   }
 
-  function removerGasolina(id) {
-    if (!confirm('Remover este abastecimento?')) return;
+  function removerAvulso(id) {
+    if (!confirm('Remover este gasto?')) return;
     const obra = getObra(obraAtualId);
-    obra.gasolina = (obra.gasolina || []).filter(g => g.id !== id);
+    obra.gastosAvulsos = (obra.gastosAvulsos || []).filter(g => g.id !== id);
+    salvar();
+    render();
+  }
+
+  function lancarRecebimento() {
+    const obra = getObra(obraAtualId);
+    const dataInput = document.getElementById('receb-data').value;
+    if (!dataInput) { alert('Informe a data.'); return; }
+    const descricao = document.getElementById('receb-desc').value.trim();
+    const valor = parseNum(document.getElementById('receb-valor').value);
+    if (valor <= 0) { alert('Informe um valor válido.'); return; }
+    if (!obra.recebimentos) obra.recebimentos = [];
+    obra.recebimentos.push({
+      id: 'rc_' + Date.now() + '_' + Math.random().toString(36).slice(2,6),
+      data: dataInput, descricao: descricao, valor: valor
+    });
+    salvar();
+    render();
+  }
+
+  function removerRecebimento(id) {
+    if (!confirm('Remover este recebimento?')) return;
+    const obra = getObra(obraAtualId);
+    obra.recebimentos = (obra.recebimentos || []).filter(r => r.id !== id);
     salvar();
     render();
   }
@@ -613,7 +963,7 @@
   function adicionarEmpreitada() {
     const obra = getObra(obraAtualId);
     const nome = document.getElementById('emp-nome').value.trim();
-    if (!nome) { alert('Informe o nome ou descrição.'); return; }
+    if (!nome) { alert('Informe o nome.'); return; }
     const valor = parseNum(document.getElementById('emp-valor').value);
     if (valor <= 0) { alert('Informe um valor válido.'); return; }
     const bonus = parseNum(document.getElementById('emp-bonus').value);
@@ -680,6 +1030,13 @@
     render();
   }
 
+  function salvarNota() {
+    const obra = getObra(obraAtualId);
+    obra.nota = document.getElementById('nota-obra').value;
+    salvar();
+    alert('Anotações salvas.');
+  }
+
   function salvarEdicaoObra() {
     const obra = getObra(obraAtualId);
     const nome = document.getElementById('ed-nome').value.trim();
@@ -689,8 +1046,10 @@
     obra.nome = nome;
     obra.cliente = document.getElementById('ed-cliente').value.trim();
     obra.contrato = contrato;
-    obra.entrada = parseNum(document.getElementById('ed-entrada').value);
     obra.impostoPct = parseNum(document.getElementById('ed-imposto').value);
+    obra.status = document.getElementById('ed-status').value;
+    obra.dataInicio = document.getElementById('ed-inicio').value;
+    obra.dataPrevisao = document.getElementById('ed-previsao').value;
     salvar();
     alert('Alterações salvas.');
     render();
@@ -704,20 +1063,22 @@
     voltarHome();
   }
 
-  // ============ INIT - Pré-cadastra Atmosphera no primeiro acesso ============
+  // INIT - Pré-cadastra Atmosphera apenas se não houver nenhuma obra
   function inicializarAtmosphera() {
-    // Só cria se não existir ainda nenhuma obra
     if (estado.obras.length > 0) return;
     const obraAtmo = {
       id: 'obra_atmosphera_inicial',
       nome: 'Atmosphera',
       cliente: 'Complexo Atmosphera',
       contrato: 96000,
-      entrada: 19200,
       impostoPct: 13,
+      dataInicio: '2026-05-27',
+      dataPrevisao: '2026-08-10',
+      status: 'andamento',
       valorMarmita: 30,
+      nota: 'Contrato assinado com Cássia Leal (Diretora Superintendente). Pagamento: 20% entrada + 4 parcelas quinzenais. Multas: 0,5%/dia após 60 dias de atraso. Garantia contratual: 5 anos.',
       diarias: [],
-      gasolina: [],
+      gastosAvulsos: [],
       empreitadas: [
         {
           id: 'e_alessandro_inicial',
@@ -732,6 +1093,7 @@
         { id: 't_carlos_inicial', nome: 'Carlos', diaria: 130 },
         { id: 't_emerson_inicial', nome: 'Emerson', diaria: 150 }
       ],
+      recebimentos: [],
       criadaEm: new Date().toISOString()
     };
     estado.obras.push(obraAtmo);
