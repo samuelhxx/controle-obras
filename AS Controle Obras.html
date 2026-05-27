@@ -1,0 +1,745 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="AS Obras">
+<meta name="theme-color" content="#73018C">
+<title>AS Construction — Controle de Obras</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif; background: #F8F8F8; color: #1A1A1A; padding: 16px 12px 40px; min-height: 100vh; }
+  .container { max-width: 700px; margin: 0 auto; }
+  .header { background: #73018C; color: #fff; padding: 18px 22px; border-radius: 12px; margin-bottom: 16px; display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+  .header-left { flex: 1; min-width: 0; }
+  .header-tag { font-size: 10px; opacity: 0.85; letter-spacing: 1.5px; font-weight: 600; }
+  .header-title { font-size: 18px; font-weight: 700; margin-top: 3px; word-wrap: break-word; }
+  .header-sub { font-size: 12px; opacity: 0.9; margin-top: 3px; }
+  .btn-back { background: rgba(255,255,255,0.2); color: #fff; border: 1px solid rgba(255,255,255,0.4); padding: 8px 12px; border-radius: 8px; font-size: 12px; font-weight: 600; cursor: pointer; font-family: inherit; flex-shrink: 0; }
+
+  .tabs { display: flex; gap: 5px; margin-bottom: 14px; flex-wrap: wrap; }
+  .tab { flex: 1 1 auto; min-width: 80px; background: #fff; color: #73018C; border: 2px solid #73018C; padding: 8px 8px; border-radius: 8px; font-size: 12px; font-weight: 600; cursor: pointer; font-family: inherit; }
+  .tab.active { background: #73018C; color: #fff; }
+
+  .card { background: #fff; border-radius: 12px; padding: 18px; margin-bottom: 14px; border: 1px solid #E8E8E8; }
+  .card-title { font-size: 11px; color: #888; letter-spacing: 1.2px; font-weight: 700; margin-bottom: 12px; }
+  .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .info-label { font-size: 11px; color: #888; }
+  .info-value { font-size: 16px; font-weight: 700; color: #73018C; margin-top: 2px; }
+  .info-value.green { color: #27AE60; }
+  .info-value.red { color: #C0392B; }
+
+  .linha { display: flex; justify-content: space-between; align-items: baseline; padding: 5px 0; }
+  .linha-label { font-size: 13px; color: #555; }
+  .linha-valor { font-size: 14px; font-weight: 600; }
+  .linha.bold .linha-label, .linha.bold .linha-valor { font-weight: 700; }
+  .divider { border-top: 2px solid #E8E8E8; margin-top: 8px; padding-top: 8px; }
+  .divider-purple { border-top: 2px solid #73018C; margin-top: 10px; padding-top: 10px; }
+
+  .resultado { background: #F3E5F7; border: 2px solid #73018C; }
+  .resultado .card-title { color: #73018C; }
+  .lucro-row { display: flex; justify-content: space-between; align-items: baseline; }
+  .lucro-label { font-size: 13px; font-weight: 700; color: #73018C; }
+  .lucro-valor { font-size: 22px; font-weight: 700; }
+  .lucro-valor.positive { color: #27AE60; }
+  .lucro-valor.negative { color: #C0392B; }
+  .margem { text-align: right; font-size: 12px; color: #666; margin-top: 4px; }
+
+  label.field-label { display: block; font-size: 12px; color: #666; font-weight: 600; margin-top: 8px; margin-bottom: 4px; }
+  input[type="date"], input[type="text"] { width: 100%; padding: 11px; font-size: 15px; border: 1px solid #DDD; border-radius: 8px; font-family: inherit; background: #fff; color: #1A1A1A; }
+
+  .trab-card { border: 1px solid #DDD; border-radius: 8px; padding: 12px; margin-bottom: 8px; background: #fff; }
+  .trab-card.selected { border: 2px solid #73018C; background: #F3E5F7; }
+  .trab-nome { font-weight: 700; font-size: 14px; margin-bottom: 6px; }
+  .btn-row { display: flex; gap: 6px; }
+  .btn-toggle { flex: 1; padding: 9px; font-size: 12px; border-radius: 6px; cursor: pointer; font-weight: 600; border: 1px solid #CCC; background: #fff; color: #333; font-family: inherit; }
+  .btn-toggle.active { border: 2px solid #73018C; background: #73018C; color: #fff; }
+
+  .btn-primary { width: 100%; background: #73018C; color: #fff; border: none; padding: 14px; border-radius: 8px; font-size: 14px; font-weight: 700; cursor: pointer; margin-top: 10px; font-family: inherit; }
+  .btn-danger { width: 100%; background: transparent; color: #C0392B; border: 1px solid #C0392B; padding: 10px; border-radius: 8px; font-size: 12px; cursor: pointer; font-weight: 600; margin-top: 8px; font-family: inherit; }
+  .btn-secondary { width: 100%; background: #fff; color: #73018C; border: 2px solid #73018C; padding: 12px; border-radius: 8px; font-size: 14px; font-weight: 700; cursor: pointer; margin-top: 10px; font-family: inherit; }
+
+  .lancamento { display: flex; justify-content: space-between; align-items: center; padding: 10px 0; border-bottom: 1px solid #F0F0F0; }
+  .lanc-desc { font-size: 13px; font-weight: 600; }
+  .lanc-data { font-size: 11px; color: #888; margin-top: 2px; }
+  .lanc-tipo { font-size: 10px; color: #73018C; font-weight: 700; text-transform: uppercase; }
+  .lanc-right { display: flex; align-items: center; gap: 10px; }
+  .lanc-valor { font-size: 14px; font-weight: 700; color: #73018C; }
+  .btn-remove { background: transparent; border: none; color: #C0392B; cursor: pointer; font-size: 22px; padding: 0 6px; line-height: 1; font-family: inherit; }
+
+  .empreitada-form { background: #FAFAFA; border: 1px dashed #CCC; border-radius: 8px; padding: 14px; margin-bottom: 12px; }
+  .empreitada-item { border: 1px solid #E8E8E8; border-radius: 8px; padding: 14px; margin-bottom: 10px; }
+  .empreitada-item.pago { background: #F3E5F7; border-color: #73018C; }
+  .emp-row { display: flex; justify-content: space-between; align-items: center; gap: 10px; }
+  .emp-info { flex: 1; min-width: 0; }
+  .emp-label { font-size: 14px; font-weight: 600; word-wrap: break-word; }
+  .emp-sub { font-size: 11px; color: #888; margin-top: 2px; }
+  .emp-valor { font-size: 16px; font-weight: 700; color: #73018C; margin-top: 4px; }
+  .btn-pago { padding: 8px 12px; border-radius: 8px; font-size: 11px; font-weight: 700; cursor: pointer; background: #fff; color: #333; border: 1px solid #CCC; font-family: inherit; flex-shrink: 0; }
+  .btn-pago.ativo { background: #27AE60; color: #fff; border: 2px solid #27AE60; }
+  .emp-actions { display: flex; gap: 6px; margin-top: 8px; }
+  .btn-mini { font-size: 11px; padding: 6px 10px; border-radius: 6px; cursor: pointer; font-weight: 600; font-family: inherit; border: 1px solid #CCC; background: #fff; color: #555; }
+  .btn-mini.danger { border-color: #C0392B; color: #C0392B; }
+
+  .empty { font-size: 13px; color: #888; text-align: center; padding: 20px; }
+  .equipe-item { display: flex; justify-content: space-between; align-items: center; padding: 10px 0; border-bottom: 1px solid #F0F0F0; }
+  .btn-remove-trab { background: transparent; border: 1px solid #C0392B; color: #C0392B; cursor: pointer; font-size: 11px; padding: 6px 10px; border-radius: 6px; font-weight: 600; font-family: inherit; }
+
+  /* OBRA CARD - tela inicial */
+  .obra-card { background: #fff; border-radius: 12px; padding: 16px; margin-bottom: 12px; border: 1px solid #E8E8E8; cursor: pointer; }
+  .obra-card:active { background: #F9F9F9; }
+  .obra-header-row { display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; margin-bottom: 10px; }
+  .obra-nome { font-size: 16px; font-weight: 700; color: #1A1A1A; word-wrap: break-word; flex: 1; }
+  .obra-cliente { font-size: 12px; color: #888; margin-top: 2px; }
+  .obra-stats { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 8px; }
+  .obra-stat-label { font-size: 10px; color: #888; letter-spacing: 0.5px; }
+  .obra-stat-val { font-size: 14px; font-weight: 700; margin-top: 1px; }
+  .badge { display: inline-block; font-size: 10px; padding: 3px 8px; border-radius: 20px; font-weight: 700; }
+  .badge.purple { background: #F3E5F7; color: #73018C; }
+
+  .footer { text-align: center; font-size: 11px; color: #999; margin-top: 20px; }
+  .hidden { display: none; }
+
+  /* Modal */
+  .modal-bg { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 100; display: none; align-items: center; justify-content: center; padding: 20px; }
+  .modal-bg.show { display: flex; }
+  .modal { background: #fff; border-radius: 12px; padding: 22px; max-width: 500px; width: 100%; max-height: 90vh; overflow-y: auto; }
+  .modal-title { font-size: 18px; font-weight: 700; color: #73018C; margin-bottom: 14px; }
+  .modal-actions { display: flex; gap: 8px; margin-top: 14px; }
+  .modal-actions button { flex: 1; }
+  .btn-cancel { background: #fff; color: #555; border: 1px solid #CCC; padding: 12px; border-radius: 8px; font-size: 13px; font-weight: 600; cursor: pointer; font-family: inherit; }
+</style>
+</head>
+<body>
+<div class="container">
+  <div id="root"></div>
+  <div class="footer">Dados salvos no seu dispositivo</div>
+</div>
+
+<!-- MODAL -->
+<div class="modal-bg" id="modal-bg" onclick="fecharModalSeFora(event)">
+  <div class="modal" id="modal-content"></div>
+</div>
+
+<script>
+  const KEY = 'asConstruction_obras_v1';
+
+  // ============ ESTADO ============
+  let estado = carregar();
+  let telaAtual = 'home'; // 'home' ou 'obra'
+  let obraAtualId = null;
+  let abaAtual = 'resumo';
+  let selecaoDiaria = {};
+
+  function carregar() {
+    try {
+      const raw = localStorage.getItem(KEY);
+      if (raw) {
+        const p = JSON.parse(raw);
+        return { obras: p.obras || [] };
+      }
+    } catch (e) {}
+    return { obras: [] };
+  }
+
+  function salvar() {
+    try {
+      localStorage.setItem(KEY, JSON.stringify(estado));
+    } catch (e) {
+      alert('Erro ao salvar: ' + e.message);
+    }
+  }
+
+  // ============ UTIL ============
+  function brl(v) { return Number(v).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }); }
+  function dateBR(iso) { if (!iso) return ''; const [y,m,d] = iso.split('-'); return d+'/'+m+'/'+y; }
+  function hojeISO() { const d = new Date(); return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); }
+  function escapeHtml(s) { return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'})[c]); }
+  function parseNum(s) { const n = parseFloat(String(s).replace(/\./g,'').replace(',','.')); return isNaN(n) ? 0 : n; }
+  function getObra(id) { return estado.obras.find(o => o.id === id); }
+
+  function calcularObra(obra) {
+    const totalDiarias = (obra.diarias || []).reduce((s,d) => s + Number(d.valor || 0), 0);
+    const totalGasolina = (obra.gasolina || []).reduce((s,g) => s + Number(g.valor || 0), 0);
+    const totalEmp = (obra.empreitadas || []).reduce((s,e) => s + (e.pago ? Number(e.valor||0) : 0) + (e.bonusPago ? Number(e.bonus||0) : 0), 0);
+    const custoTotal = totalDiarias + totalGasolina + totalEmp;
+    const imposto = Number(obra.contrato || 0) * (Number(obra.impostoPct || 0) / 100);
+    const lucro = Number(obra.contrato || 0) - custoTotal - imposto;
+    const margem = obra.contrato > 0 ? (lucro / obra.contrato) * 100 : 0;
+    return { totalDiarias, totalGasolina, totalEmp, custoTotal, imposto, lucro, margem };
+  }
+
+  // ============ RENDER PRINCIPAL ============
+  function render() {
+    const root = document.getElementById('root');
+    if (telaAtual === 'home') {
+      root.innerHTML = renderHome();
+      attachHomeEvents();
+    } else if (telaAtual === 'obra') {
+      const obra = getObra(obraAtualId);
+      if (!obra) { telaAtual = 'home'; return render(); }
+      root.innerHTML = renderObra(obra);
+      attachObraEvents();
+    }
+  }
+
+  // ============ HOME ============
+  function renderHome() {
+    let totalGeralLucro = 0;
+    let totalGeralContrato = 0;
+    estado.obras.forEach(o => {
+      const c = calcularObra(o);
+      totalGeralLucro += c.lucro;
+      totalGeralContrato += Number(o.contrato || 0);
+    });
+
+    let html = '<div class="header">';
+    html += '<div class="header-left">';
+    html += '<div class="header-tag">AS CONSTRUCTION</div>';
+    html += '<div class="header-title">Controle de Obras</div>';
+    html += '<div class="header-sub">' + estado.obras.length + ' obra(s) cadastrada(s)</div>';
+    html += '</div></div>';
+
+    if (estado.obras.length > 0) {
+      html += '<div class="card resultado">';
+      html += '<div class="card-title">RESUMO GERAL</div>';
+      html += '<div class="linha"><div class="linha-label">Receita Total</div><div class="linha-valor">' + brl(totalGeralContrato) + '</div></div>';
+      html += '<div class="divider-purple">';
+      html += '<div class="lucro-row"><div class="lucro-label">LUCRO PROJETADO TOTAL</div>';
+      html += '<div class="lucro-valor ' + (totalGeralLucro >= 0 ? 'positive' : 'negative') + '">' + brl(totalGeralLucro) + '</div></div>';
+      html += '</div></div>';
+    }
+
+    html += '<button class="btn-primary" onclick="abrirModalNovaObra()">+ Adicionar Nova Obra</button>';
+
+    if (estado.obras.length === 0) {
+      html += '<div class="card" style="margin-top: 16px;"><div class="empty">Nenhuma obra cadastrada ainda.<br>Clique em "Adicionar Nova Obra" para começar.</div></div>';
+    } else {
+      html += '<div style="margin-top: 18px;">';
+      estado.obras.forEach(o => {
+        const c = calcularObra(o);
+        html += '<div class="obra-card" onclick="abrirObra(\'' + o.id + '\')">';
+        html += '<div class="obra-header-row">';
+        html += '<div><div class="obra-nome">' + escapeHtml(o.nome) + '</div>';
+        if (o.cliente) html += '<div class="obra-cliente">' + escapeHtml(o.cliente) + '</div>';
+        html += '</div>';
+        html += '<span class="badge purple">' + (o.impostoPct || 0) + '% imp.</span>';
+        html += '</div>';
+        html += '<div class="obra-stats">';
+        html += '<div><div class="obra-stat-label">CONTRATO</div><div class="obra-stat-val" style="color: #73018C">' + brl(o.contrato || 0) + '</div></div>';
+        html += '<div><div class="obra-stat-label">LUCRO PROJETADO</div><div class="obra-stat-val" style="color:' + (c.lucro >= 0 ? '#27AE60' : '#C0392B') + '">' + brl(c.lucro) + '</div></div>';
+        html += '</div></div>';
+      });
+      html += '</div>';
+    }
+    return html;
+  }
+
+  function attachHomeEvents() {}
+
+  // ============ OBRA ============
+  function renderObra(obra) {
+    const c = calcularObra(obra);
+    let html = '<div class="header">';
+    html += '<div class="header-left">';
+    html += '<div class="header-tag">' + (obra.cliente ? escapeHtml(obra.cliente).toUpperCase() : 'AS CONSTRUCTION') + '</div>';
+    html += '<div class="header-title">' + escapeHtml(obra.nome) + '</div>';
+    html += '<div class="header-sub">Contrato: ' + brl(obra.contrato || 0) + '</div>';
+    html += '</div>';
+    html += '<button class="btn-back" onclick="voltarHome()">← Voltar</button>';
+    html += '</div>';
+
+    html += '<div class="tabs">';
+    const abas = [['resumo','Resumo'],['diarias','Diárias'],['gasolina','Gasolina'],['empreitada','Empreitada'],['historico','Histórico'],['equipe','Equipe'],['editar','Editar']];
+    abas.forEach(a => {
+      html += '<button class="tab ' + (abaAtual === a[0] ? 'active' : '') + '" onclick="trocarAba(\'' + a[0] + '\')">' + a[1] + '</button>';
+    });
+    html += '</div>';
+
+    if (abaAtual === 'resumo') html += renderAbaResumo(obra, c);
+    else if (abaAtual === 'diarias') html += renderAbaDiarias(obra, c);
+    else if (abaAtual === 'gasolina') html += renderAbaGasolina(obra, c);
+    else if (abaAtual === 'empreitada') html += renderAbaEmpreitada(obra, c);
+    else if (abaAtual === 'historico') html += renderAbaHistorico(obra);
+    else if (abaAtual === 'equipe') html += renderAbaEquipe(obra);
+    else if (abaAtual === 'editar') html += renderAbaEditar(obra);
+
+    return html;
+  }
+
+  function attachObraEvents() {
+    const dInput = document.getElementById('diaria-data');
+    if (dInput && !dInput.value) dInput.value = hojeISO();
+    const gInput = document.getElementById('gas-data');
+    if (gInput && !gInput.value) gInput.value = hojeISO();
+  }
+
+  // ============ ABAS ============
+  function renderAbaResumo(o, c) {
+    let html = '<div class="card"><div class="card-title">CONTRATO</div>';
+    html += '<div class="grid-2">';
+    html += '<div><div class="info-label">Valor Total</div><div class="info-value">' + brl(o.contrato || 0) + '</div></div>';
+    html += '<div><div class="info-label">Entrada Recebida</div><div class="info-value green">' + brl(o.entrada || 0) + '</div></div>';
+    html += '</div></div>';
+
+    html += '<div class="card"><div class="card-title">CUSTOS ACUMULADOS</div>';
+    html += '<div class="linha"><div class="linha-label">Diárias da equipe</div><div class="linha-valor">' + brl(c.totalDiarias) + '</div></div>';
+    html += '<div class="linha"><div class="linha-label">Gasolina</div><div class="linha-valor">' + brl(c.totalGasolina) + '</div></div>';
+    html += '<div class="linha"><div class="linha-label">Empreitadas</div><div class="linha-valor">' + brl(c.totalEmp) + '</div></div>';
+    html += '<div class="divider"><div class="linha bold"><div class="linha-label">Custo Total Operacional</div><div class="linha-valor">' + brl(c.custoTotal) + '</div></div></div>';
+    html += '</div>';
+
+    html += '<div class="card resultado"><div class="card-title">RESULTADO LÍQUIDO</div>';
+    html += '<div class="linha"><div class="linha-label">Receita</div><div class="linha-valor">' + brl(o.contrato || 0) + '</div></div>';
+    html += '<div class="linha"><div class="linha-label">(-) Custo Operacional</div><div class="linha-valor">- ' + brl(c.custoTotal) + '</div></div>';
+    html += '<div class="linha"><div class="linha-label">(-) Imposto (' + (o.impostoPct || 0) + '%)</div><div class="linha-valor">- ' + brl(c.imposto) + '</div></div>';
+    html += '<div class="divider-purple"><div class="lucro-row"><div class="lucro-label">LUCRO LÍQUIDO</div>';
+    html += '<div class="lucro-valor ' + (c.lucro >= 0 ? 'positive' : 'negative') + '">' + brl(c.lucro) + '</div></div>';
+    html += '<div class="margem">Margem: ' + c.margem.toFixed(1) + '%</div></div></div>';
+
+    return html;
+  }
+
+  function renderAbaDiarias(o, c) {
+    let html = '<div class="card"><div class="card-title">LANÇAR DIÁRIA</div>';
+    html += '<label class="field-label">Data</label><input type="date" id="diaria-data">';
+    html += '<label class="field-label" style="margin-top: 14px;">Selecione quem trabalhou:</label>';
+
+    if (!o.trabalhadores || o.trabalhadores.length === 0) {
+      html += '<div class="empty">Nenhum trabalhador cadastrado.<br>Vá na aba "Equipe" para adicionar.</div>';
+    } else {
+      o.trabalhadores.forEach(t => {
+        const sel = selecaoDiaria[t.id];
+        html += '<div class="trab-card ' + (sel ? 'selected' : '') + '">';
+        html += '<div class="trab-nome">' + escapeHtml(t.nome) + ' — ' + brl(t.diaria) + '/dia</div>';
+        html += '<div class="btn-row">';
+        html += '<button class="btn-toggle ' + (sel && !sel.marmita ? 'active' : '') + '" onclick="toggleSel(\'' + t.id + '\', false)">Sem marmita</button>';
+        html += '<button class="btn-toggle ' + (sel && sel.marmita ? 'active' : '') + '" onclick="toggleSel(\'' + t.id + '\', true, ' + (o.valorMarmita || 30) + ')">Com marmita (+' + brl(o.valorMarmita || 30) + ')</button>';
+        html += '</div></div>';
+      });
+      html += '<button class="btn-primary" onclick="lancarDiaria()">Lançar Diária</button>';
+    }
+    html += '</div>';
+
+    html += '<div class="card"><div class="card-title">ÚLTIMOS LANÇAMENTOS (' + (o.diarias || []).length + ')</div>';
+    if (!o.diarias || o.diarias.length === 0) {
+      html += '<div class="empty">Nenhum lançamento ainda.</div>';
+    } else {
+      const ord = o.diarias.slice().sort((a,b) => b.data.localeCompare(a.data)).slice(0,30);
+      ord.forEach(d => {
+        html += '<div class="lancamento">';
+        html += '<div><div class="lanc-desc">' + escapeHtml(d.trabNome) + (d.marmita ? ' + marmita' : '') + '</div>';
+        html += '<div class="lanc-data">' + dateBR(d.data) + '</div></div>';
+        html += '<div class="lanc-right"><div class="lanc-valor">' + brl(d.valor) + '</div>';
+        html += '<button class="btn-remove" onclick="removerDiaria(\'' + d.id + '\')">×</button></div></div>';
+      });
+    }
+    html += '<div class="divider"><div class="linha bold"><div class="linha-label">TOTAL</div><div class="linha-valor">' + brl(c.totalDiarias) + '</div></div></div>';
+    html += '</div>';
+    return html;
+  }
+
+  function renderAbaGasolina(o, c) {
+    let html = '<div class="card"><div class="card-title">LANÇAR ABASTECIMENTO</div>';
+    html += '<label class="field-label">Data</label><input type="date" id="gas-data">';
+    html += '<label class="field-label">Valor (R$)</label><input type="text" inputmode="decimal" id="gas-valor" placeholder="Ex.: 150,00">';
+    html += '<button class="btn-primary" onclick="lancarGasolina()">Lançar</button></div>';
+
+    html += '<div class="card"><div class="card-title">ABASTECIMENTOS (' + (o.gasolina || []).length + ')</div>';
+    if (!o.gasolina || o.gasolina.length === 0) {
+      html += '<div class="empty">Nenhum abastecimento.</div>';
+    } else {
+      const ord = o.gasolina.slice().sort((a,b) => b.data.localeCompare(a.data));
+      ord.forEach(g => {
+        html += '<div class="lancamento">';
+        html += '<div style="font-size: 13px;">' + dateBR(g.data) + '</div>';
+        html += '<div class="lanc-right"><div class="lanc-valor">' + brl(g.valor) + '</div>';
+        html += '<button class="btn-remove" onclick="removerGasolina(\'' + g.id + '\')">×</button></div></div>';
+      });
+    }
+    html += '<div class="divider"><div class="linha bold"><div class="linha-label">TOTAL</div><div class="linha-valor">' + brl(c.totalGasolina) + '</div></div></div>';
+    html += '</div>';
+    return html;
+  }
+
+  function renderAbaEmpreitada(o, c) {
+    let html = '<div class="card"><div class="card-title">NOVA EMPREITADA</div>';
+    html += '<div class="empreitada-form">';
+    html += '<label class="field-label">Nome / Descrição</label><input type="text" id="emp-nome" placeholder="Ex.: Alessandro - rejunte piscinas">';
+    html += '<label class="field-label">Valor (R$)</label><input type="text" inputmode="decimal" id="emp-valor" placeholder="Ex.: 13000,00">';
+    html += '<label class="field-label">Bônus por entrega no prazo (R$) — opcional</label><input type="text" inputmode="decimal" id="emp-bonus" placeholder="Ex.: 1000,00 (deixe vazio se não houver)">';
+    html += '<button class="btn-primary" onclick="adicionarEmpreitada()">Adicionar Empreitada</button>';
+    html += '</div></div>';
+
+    html += '<div class="card"><div class="card-title">EMPREITADAS (' + (o.empreitadas || []).length + ')</div>';
+    if (!o.empreitadas || o.empreitadas.length === 0) {
+      html += '<div class="empty">Nenhuma empreitada cadastrada.</div>';
+    } else {
+      o.empreitadas.forEach(e => {
+        html += '<div class="empreitada-item ' + (e.pago ? 'pago' : '') + '">';
+        html += '<div class="emp-row">';
+        html += '<div class="emp-info"><div class="emp-label">' + escapeHtml(e.nome) + '</div>';
+        html += '<div class="emp-valor">' + brl(e.valor) + '</div></div>';
+        html += '<button class="btn-pago ' + (e.pago ? 'ativo' : '') + '" onclick="toggleEmpPago(\'' + e.id + '\')">' + (e.pago ? '✓ Pago' : 'Pagar') + '</button>';
+        html += '</div>';
+        if (Number(e.bonus || 0) > 0) {
+          html += '<div class="emp-row" style="margin-top: 10px; padding-top: 10px; border-top: 1px dashed #DDD;">';
+          html += '<div class="emp-info"><div class="emp-sub">Bônus (entrega no prazo)</div>';
+          html += '<div class="emp-valor" style="font-size: 14px;">' + brl(e.bonus) + '</div></div>';
+          html += '<button class="btn-pago ' + (e.bonusPago ? 'ativo' : '') + '" onclick="toggleEmpBonus(\'' + e.id + '\')">' + (e.bonusPago ? '✓ Pago' : 'Pagar') + '</button>';
+          html += '</div>';
+        }
+        html += '<div class="emp-actions"><button class="btn-mini danger" onclick="removerEmpreitada(\'' + e.id + '\')">Remover</button></div>';
+        html += '</div>';
+      });
+    }
+    html += '<div class="divider"><div class="linha bold"><div class="linha-label">TOTAL PAGO</div><div class="linha-valor">' + brl(c.totalEmp) + '</div></div></div>';
+    html += '</div>';
+    return html;
+  }
+
+  function renderAbaHistorico(o) {
+    const hist = [];
+    (o.diarias || []).forEach(d => hist.push({data: d.data, tipo: 'Diária', desc: d.trabNome + (d.marmita ? ' + marmita' : ''), valor: d.valor, id: d.id, kind: 'diaria'}));
+    (o.gasolina || []).forEach(g => hist.push({data: g.data, tipo: 'Gasolina', desc: 'Abastecimento', valor: g.valor, id: g.id, kind: 'gas'}));
+    hist.sort((a,b) => b.data.localeCompare(a.data));
+
+    let html = '<div class="card"><div class="card-title">HISTÓRICO (' + hist.length + ')</div>';
+    if (hist.length === 0) {
+      html += '<div class="empty">Sem lançamentos.</div>';
+    } else {
+      hist.forEach(h => {
+        const removeAction = h.kind === 'diaria' ? 'removerDiaria' : 'removerGasolina';
+        html += '<div class="lancamento">';
+        html += '<div style="flex:1;"><div class="lanc-tipo">' + h.tipo + '</div>';
+        html += '<div class="lanc-desc">' + escapeHtml(h.desc) + '</div>';
+        html += '<div class="lanc-data">' + dateBR(h.data) + '</div></div>';
+        html += '<div class="lanc-right"><div class="lanc-valor">' + brl(h.valor) + '</div>';
+        html += '<button class="btn-remove" onclick="' + removeAction + '(\'' + h.id + '\')">×</button></div></div>';
+      });
+    }
+    html += '</div>';
+    return html;
+  }
+
+  function renderAbaEquipe(o) {
+    let html = '<div class="card"><div class="card-title">EQUIPE CADASTRADA</div>';
+    if (!o.trabalhadores || o.trabalhadores.length === 0) {
+      html += '<div class="empty">Nenhum trabalhador cadastrado.</div>';
+    } else {
+      o.trabalhadores.forEach(t => {
+        html += '<div class="equipe-item">';
+        html += '<div><div style="font-size: 14px; font-weight: 600;">' + escapeHtml(t.nome) + '</div>';
+        html += '<div style="font-size: 12px; color: #888;">Diária: ' + brl(t.diaria) + '</div></div>';
+        html += '<button class="btn-remove-trab" onclick="removerTrabalhador(\'' + t.id + '\')">Remover</button></div>';
+      });
+    }
+    html += '</div>';
+
+    html += '<div class="card"><div class="card-title">ADICIONAR TRABALHADOR</div>';
+    html += '<label class="field-label">Nome</label><input type="text" id="novo-trab-nome" placeholder="Ex.: Jorge">';
+    html += '<label class="field-label">Valor da diária (R$)</label><input type="text" inputmode="decimal" id="novo-trab-diaria" placeholder="Ex.: 150">';
+    html += '<button class="btn-primary" onclick="adicionarTrabalhador()">Adicionar</button>';
+    html += '</div>';
+
+    html += '<div class="card"><div class="card-title">VALOR PADRÃO DA MARMITA</div>';
+    html += '<label class="field-label">Valor (R$) — aplicado quando marcar "com marmita"</label>';
+    html += '<input type="text" inputmode="decimal" id="valor-marmita" value="' + (o.valorMarmita || 30) + '">';
+    html += '<button class="btn-primary" onclick="salvarMarmita()">Salvar</button>';
+    html += '</div>';
+    return html;
+  }
+
+  function renderAbaEditar(o) {
+    let html = '<div class="card"><div class="card-title">EDITAR DADOS DA OBRA</div>';
+    html += '<label class="field-label">Nome da obra</label><input type="text" id="ed-nome" value="' + escapeHtml(o.nome) + '">';
+    html += '<label class="field-label">Cliente</label><input type="text" id="ed-cliente" value="' + escapeHtml(o.cliente || '') + '">';
+    html += '<label class="field-label">Valor do contrato (R$)</label><input type="text" inputmode="decimal" id="ed-contrato" value="' + (o.contrato || 0) + '">';
+    html += '<label class="field-label">Entrada recebida (R$)</label><input type="text" inputmode="decimal" id="ed-entrada" value="' + (o.entrada || 0) + '">';
+    html += '<label class="field-label">Imposto (%)</label><input type="text" inputmode="decimal" id="ed-imposto" value="' + (o.impostoPct || 0) + '">';
+    html += '<button class="btn-primary" onclick="salvarEdicaoObra()">Salvar Alterações</button>';
+    html += '<button class="btn-danger" onclick="excluirObra()" style="margin-top: 16px;">Excluir esta obra</button>';
+    html += '</div>';
+    return html;
+  }
+
+  // ============ MODAL ============
+  function abrirModalNovaObra() {
+    const html = '<div class="modal-title">Nova Obra</div>' +
+      '<label class="field-label">Nome da obra *</label><input type="text" id="nova-nome" placeholder="Ex.: Atmosphera">' +
+      '<label class="field-label">Cliente</label><input type="text" id="nova-cliente" placeholder="Ex.: Complexo Atmosphera">' +
+      '<label class="field-label">Valor do contrato (R$) *</label><input type="text" inputmode="decimal" id="nova-contrato" placeholder="Ex.: 96000">' +
+      '<label class="field-label">Entrada recebida (R$)</label><input type="text" inputmode="decimal" id="nova-entrada" placeholder="Ex.: 19200">' +
+      '<label class="field-label">Imposto (%)</label><input type="text" inputmode="decimal" id="nova-imposto" value="13" placeholder="Ex.: 13">' +
+      '<div class="modal-actions">' +
+        '<button class="btn-cancel" onclick="fecharModal()">Cancelar</button>' +
+        '<button class="btn-primary" style="margin-top:0" onclick="criarObra()">Criar Obra</button>' +
+      '</div>';
+    document.getElementById('modal-content').innerHTML = html;
+    document.getElementById('modal-bg').classList.add('show');
+  }
+
+  function fecharModal() {
+    document.getElementById('modal-bg').classList.remove('show');
+  }
+
+  function fecharModalSeFora(ev) {
+    if (ev.target.id === 'modal-bg') fecharModal();
+  }
+
+  function criarObra() {
+    const nome = document.getElementById('nova-nome').value.trim();
+    if (!nome) { alert('Informe o nome da obra.'); return; }
+    const contrato = parseNum(document.getElementById('nova-contrato').value);
+    if (contrato <= 0) { alert('Informe o valor do contrato.'); return; }
+    const cliente = document.getElementById('nova-cliente').value.trim();
+    const entrada = parseNum(document.getElementById('nova-entrada').value);
+    const impostoPct = parseNum(document.getElementById('nova-imposto').value);
+
+    const novaObra = {
+      id: 'obra_' + Date.now(),
+      nome: nome,
+      cliente: cliente,
+      contrato: contrato,
+      entrada: entrada,
+      impostoPct: impostoPct,
+      valorMarmita: 30,
+      diarias: [],
+      gasolina: [],
+      empreitadas: [],
+      trabalhadores: [],
+      criadaEm: new Date().toISOString()
+    };
+    estado.obras.push(novaObra);
+    salvar();
+    fecharModal();
+    abrirObra(novaObra.id);
+  }
+
+  // ============ NAVEGAÇÃO ============
+  function abrirObra(id) {
+    obraAtualId = id;
+    telaAtual = 'obra';
+    abaAtual = 'resumo';
+    selecaoDiaria = {};
+    render();
+    window.scrollTo(0, 0);
+  }
+
+  function voltarHome() {
+    telaAtual = 'home';
+    obraAtualId = null;
+    selecaoDiaria = {};
+    render();
+    window.scrollTo(0, 0);
+  }
+
+  function trocarAba(aba) {
+    abaAtual = aba;
+    selecaoDiaria = {};
+    render();
+    window.scrollTo(0, 0);
+  }
+
+  // ============ AÇÕES OBRA ============
+  function toggleSel(id, marmita, valorMarmita) {
+    const atual = selecaoDiaria[id];
+    if (atual && atual.marmita === marmita) {
+      delete selecaoDiaria[id];
+    } else {
+      selecaoDiaria[id] = { marmita: marmita };
+    }
+    render();
+  }
+
+  function lancarDiaria() {
+    const obra = getObra(obraAtualId);
+    if (!obra) return;
+    const ids = Object.keys(selecaoDiaria);
+    if (ids.length === 0) { alert('Selecione ao menos um trabalhador.'); return; }
+    const dataInput = document.getElementById('diaria-data').value;
+    if (!dataInput) { alert('Informe a data.'); return; }
+    if (!obra.diarias) obra.diarias = [];
+    ids.forEach(id => {
+      const t = obra.trabalhadores.find(x => x.id === id);
+      if (!t) return;
+      const marmita = selecaoDiaria[id].marmita;
+      const valorMarmita = Number(obra.valorMarmita || 30);
+      const valor = Number(t.diaria) + (marmita ? valorMarmita : 0);
+      obra.diarias.push({
+        id: 'd_' + Date.now() + '_' + id + '_' + Math.random().toString(36).slice(2,6),
+        data: dataInput, trabId: id, trabNome: t.nome,
+        diaria: t.diaria, marmita: marmita, valor: valor
+      });
+    });
+    selecaoDiaria = {};
+    salvar();
+    render();
+  }
+
+  function removerDiaria(id) {
+    if (!confirm('Remover este lançamento?')) return;
+    const obra = getObra(obraAtualId);
+    obra.diarias = (obra.diarias || []).filter(d => d.id !== id);
+    salvar();
+    render();
+  }
+
+  function lancarGasolina() {
+    const obra = getObra(obraAtualId);
+    const dataInput = document.getElementById('gas-data').value;
+    if (!dataInput) { alert('Informe a data.'); return; }
+    const valor = parseNum(document.getElementById('gas-valor').value);
+    if (valor <= 0) { alert('Informe um valor válido.'); return; }
+    if (!obra.gasolina) obra.gasolina = [];
+    obra.gasolina.push({
+      id: 'g_' + Date.now() + '_' + Math.random().toString(36).slice(2,6),
+      data: dataInput, valor: valor
+    });
+    salvar();
+    render();
+  }
+
+  function removerGasolina(id) {
+    if (!confirm('Remover este abastecimento?')) return;
+    const obra = getObra(obraAtualId);
+    obra.gasolina = (obra.gasolina || []).filter(g => g.id !== id);
+    salvar();
+    render();
+  }
+
+  function adicionarEmpreitada() {
+    const obra = getObra(obraAtualId);
+    const nome = document.getElementById('emp-nome').value.trim();
+    if (!nome) { alert('Informe o nome ou descrição.'); return; }
+    const valor = parseNum(document.getElementById('emp-valor').value);
+    if (valor <= 0) { alert('Informe um valor válido.'); return; }
+    const bonus = parseNum(document.getElementById('emp-bonus').value);
+    if (!obra.empreitadas) obra.empreitadas = [];
+    obra.empreitadas.push({
+      id: 'e_' + Date.now() + '_' + Math.random().toString(36).slice(2,6),
+      nome: nome, valor: valor, bonus: bonus,
+      pago: false, bonusPago: false
+    });
+    salvar();
+    render();
+  }
+
+  function toggleEmpPago(id) {
+    const obra = getObra(obraAtualId);
+    const e = (obra.empreitadas || []).find(x => x.id === id);
+    if (e) { e.pago = !e.pago; salvar(); render(); }
+  }
+
+  function toggleEmpBonus(id) {
+    const obra = getObra(obraAtualId);
+    const e = (obra.empreitadas || []).find(x => x.id === id);
+    if (e) { e.bonusPago = !e.bonusPago; salvar(); render(); }
+  }
+
+  function removerEmpreitada(id) {
+    if (!confirm('Remover esta empreitada?')) return;
+    const obra = getObra(obraAtualId);
+    obra.empreitadas = (obra.empreitadas || []).filter(e => e.id !== id);
+    salvar();
+    render();
+  }
+
+  function adicionarTrabalhador() {
+    const obra = getObra(obraAtualId);
+    const nome = document.getElementById('novo-trab-nome').value.trim();
+    if (!nome) { alert('Informe o nome.'); return; }
+    const diaria = parseNum(document.getElementById('novo-trab-diaria').value);
+    if (diaria <= 0) { alert('Informe a diária.'); return; }
+    if (!obra.trabalhadores) obra.trabalhadores = [];
+    obra.trabalhadores.push({
+      id: 't_' + Date.now() + '_' + Math.random().toString(36).slice(2,6),
+      nome: nome, diaria: diaria
+    });
+    salvar();
+    render();
+  }
+
+  function removerTrabalhador(id) {
+    if (!confirm('Remover este trabalhador? Os lançamentos antigos permanecem no histórico.')) return;
+    const obra = getObra(obraAtualId);
+    obra.trabalhadores = (obra.trabalhadores || []).filter(t => t.id !== id);
+    salvar();
+    render();
+  }
+
+  function salvarMarmita() {
+    const obra = getObra(obraAtualId);
+    const v = parseNum(document.getElementById('valor-marmita').value);
+    if (v < 0) { alert('Valor inválido.'); return; }
+    obra.valorMarmita = v;
+    salvar();
+    alert('Valor da marmita salvo: ' + brl(v));
+    render();
+  }
+
+  function salvarEdicaoObra() {
+    const obra = getObra(obraAtualId);
+    const nome = document.getElementById('ed-nome').value.trim();
+    if (!nome) { alert('Informe o nome.'); return; }
+    const contrato = parseNum(document.getElementById('ed-contrato').value);
+    if (contrato <= 0) { alert('Valor de contrato inválido.'); return; }
+    obra.nome = nome;
+    obra.cliente = document.getElementById('ed-cliente').value.trim();
+    obra.contrato = contrato;
+    obra.entrada = parseNum(document.getElementById('ed-entrada').value);
+    obra.impostoPct = parseNum(document.getElementById('ed-imposto').value);
+    salvar();
+    alert('Alterações salvas.');
+    render();
+  }
+
+  function excluirObra() {
+    if (!confirm('ATENÇÃO: Excluir esta obra e TODOS os lançamentos dela?')) return;
+    if (!confirm('Tem certeza? Esta ação não pode ser desfeita.')) return;
+    estado.obras = estado.obras.filter(o => o.id !== obraAtualId);
+    salvar();
+    voltarHome();
+  }
+
+  // ============ INIT - Pré-cadastra Atmosphera no primeiro acesso ============
+  function inicializarAtmosphera() {
+    // Só cria se não existir ainda nenhuma obra
+    if (estado.obras.length > 0) return;
+    const obraAtmo = {
+      id: 'obra_atmosphera_inicial',
+      nome: 'Atmosphera',
+      cliente: 'Complexo Atmosphera',
+      contrato: 96000,
+      entrada: 19200,
+      impostoPct: 13,
+      valorMarmita: 30,
+      diarias: [],
+      gasolina: [],
+      empreitadas: [
+        {
+          id: 'e_alessandro_inicial',
+          nome: 'Alessandro - retirada do rejuntamento das piscinas',
+          valor: 13000,
+          bonus: 1000,
+          pago: false,
+          bonusPago: false
+        }
+      ],
+      trabalhadores: [
+        { id: 't_carlos_inicial', nome: 'Carlos', diaria: 130 },
+        { id: 't_emerson_inicial', nome: 'Emerson', diaria: 150 }
+      ],
+      criadaEm: new Date().toISOString()
+    };
+    estado.obras.push(obraAtmo);
+    salvar();
+  }
+
+  inicializarAtmosphera();
+  render();
+</script>
+</body>
+</html>
