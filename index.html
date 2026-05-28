@@ -1242,27 +1242,11 @@
     try {
       const calc = calcularObra(obra);
       const system = gerarContextoObra(obra, calc);
-      const resp = await fetch('https://api.anthropic.com/v1/messages', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-api-key': apiKey,
-          'anthropic-version': '2023-06-01',
-          'anthropic-dangerous-direct-browser-calls': 'true'
-        },
-        body: JSON.stringify({
-          model: 'claude-sonnet-4-20250514',
-          max_tokens: 1024,
-          system: system,
-          messages: chatMensagens
-        })
-      });
-      if (!resp.ok) {
-        const err = await resp.json().catch(() => ({}));
-        throw new Error(err.error && err.error.message ? err.error.message : 'Erro HTTP ' + resp.status);
+      if (!window._anthropicSend) {
+        throw new Error('SDK ainda carregando — aguarde um instante e tente novamente.');
       }
-      const data = await resp.json();
-      chatMensagens.push({ role: 'assistant', content: data.content[0].text });
+      const text = await window._anthropicSend(apiKey, system, chatMensagens);
+      chatMensagens.push({ role: 'assistant', content: text });
     } catch (e) {
       chatMensagens.push({ role: 'assistant', content: '⚠️ Erro ao consultar a IA: ' + e.message });
     }
@@ -1311,6 +1295,20 @@
 
   inicializarAtmosphera();
   render();
+</script>
+
+<script type="module">
+  import Anthropic from 'https://esm.sh/@anthropic-ai/sdk';
+  window._anthropicSend = async function(apiKey, system, messages) {
+    const client = new Anthropic({ apiKey, dangerouslyAllowBrowser: true });
+    const msg = await client.messages.create({
+      model: 'claude-sonnet-4-20250514',
+      max_tokens: 1024,
+      system: system,
+      messages: messages
+    });
+    return msg.content[0].text;
+  };
 </script>
 </body>
 </html>
