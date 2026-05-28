@@ -372,6 +372,7 @@
   let estado = carregar();
   let orcamentos = carregarOrcamentos();
   let usuarioAtual = null;
+  let _firestoreHadData = false;
   let telaAtual = 'home';
   let obraAtualId = null;
   let abaAtual = 'resumo';
@@ -2525,6 +2526,7 @@
         firestoreGetDoc(firestoreDoc(db, 'usuarios', uid, 'dados', 'orcamentos'))
       ]);
       if (obrasSnap.exists()) {
+        _firestoreHadData = true;
         const data = obrasSnap.data();
         estado = { obras: migrarObras(data.obras || []) };
       }
@@ -2558,7 +2560,7 @@
   }
 
   function verificarMigracao() {
-    if (estado.obras.length > 0) return false;
+    if (_firestoreHadData) return false;
     const localRaw = localStorage.getItem(KEY);
     if (!localRaw) return false;
     let localObras = [];
