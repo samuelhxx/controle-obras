@@ -71,7 +71,7 @@
   .margem { text-align: right; font-size: 12px; color: var(--ink-3); margin-top: 6px; }
 
   label.field-label { display: block; font-size: 12px; color: var(--ink-3); font-weight: 600; margin-top: 14px; margin-bottom: 6px; letter-spacing: 0.3px; }
-  input[type="date"], input[type="text"], select, textarea { width: 100%; padding: 13px 14px; font-size: 15px; border: 1.5px solid rgba(0,0,0,0.10); border-radius: var(--radius-input); font-family: inherit; background: var(--bg); color: var(--ink); transition: border-color 0.15s ease, box-shadow 0.15s ease; }
+  input[type="date"], input[type="text"], input[type="number"], select, textarea { width: 100%; padding: 13px 14px; font-size: 15px; border: 1.5px solid rgba(0,0,0,0.10); border-radius: var(--radius-input); font-family: inherit; background: var(--bg); color: var(--ink); transition: border-color 0.15s ease, box-shadow 0.15s ease; }
   input:focus, select:focus, textarea:focus { border-color: var(--purple); box-shadow: 0 0 0 3px rgba(115,1,140,0.10); outline: none; background: #fff; }
   textarea { min-height: 80px; resize: vertical; }
   select { -webkit-appearance: none; appearance: none; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23888' d='M6 9L1 4h10z'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 14px center; padding-right: 36px; }
@@ -241,6 +241,7 @@
   [data-theme="dark"] .backup-text { background: #1C1C1E; }
   [data-theme="dark"] input[type="date"],
   [data-theme="dark"] input[type="text"],
+  [data-theme="dark"] input[type="number"],
   [data-theme="dark"] select,
   [data-theme="dark"] textarea { background: #1C1C1E; color: var(--ink); border-color: rgba(255,255,255,0.10); }
   [data-theme="dark"] input:focus,
@@ -274,6 +275,28 @@
   .margem-bar-wrap { display: flex; align-items: center; gap: 8px; }
   .margem-bar { height: 6px; border-radius: 3px; min-width: 2px; flex-shrink: 0; transition: width 0.3s var(--ease); }
   @media (max-width: 767px) { .painel-col-hide { display: none; } }
+
+  /* Calculadora de Orçamento */
+  .orc-modo-pills { display: flex; gap: 6px; margin: 16px 0 8px; }
+  .orc-modo-pill { flex: 1; padding: 10px; border-radius: 100px; border: 1.5px solid rgba(0,0,0,0.10); background: var(--bg); color: var(--ink-3); font-size: 13px; font-weight: 500; cursor: pointer; font-family: inherit; text-align: center; transition: all 0.18s var(--ease); }
+  .orc-modo-pill.active { background: var(--purple); color: #fff; border-color: var(--purple); font-weight: 600; }
+  .orc-saude { font-size: 12px; font-weight: 700; padding: 4px 12px; border-radius: 100px; display: inline-block; margin-top: 8px; letter-spacing: 0.3px; }
+  .orc-saude.verde { background: rgba(5,150,105,0.10); color: var(--green); }
+  .orc-saude.amber { background: rgba(217,119,6,0.10); color: var(--amber); }
+  .orc-saude.critica { background: rgba(220,38,38,0.08); color: var(--red); }
+  .orc-saude.prejuizo { background: rgba(220,38,38,0.15); color: var(--red); }
+  .diaria-helper { display: flex; gap: 8px; align-items: center; }
+  .diaria-helper input { flex: 1; min-width: 0; }
+  .diaria-helper span { font-size: 18px; color: var(--ink-3); flex-shrink: 0; line-height: 1; }
+  .diaria-total { font-size: 13px; color: var(--ink-3); margin-top: 6px; }
+  .orc-item { border: 1.5px solid rgba(0,0,0,0.08); border-radius: 12px; padding: 14px 16px; margin-bottom: 10px; background: var(--bg); }
+  .orc-item-header { display: flex; justify-content: space-between; align-items: flex-start; gap: 8px; }
+  .orc-item-nome { font-size: 14px; font-weight: 700; color: var(--ink); }
+  .orc-item-cliente { font-size: 12px; color: var(--ink-3); margin-top: 2px; }
+  .orc-item-preco { font-size: 17px; font-weight: 700; color: var(--purple); margin-top: 6px; letter-spacing: -0.2px; }
+  .orc-item-actions { display: flex; gap: 6px; margin-top: 10px; flex-wrap: wrap; }
+  [data-theme="dark"] .orc-item { background: #1C1C1E; }
+  [data-theme="dark"] .orc-modo-pill { background: #1C1C1E; border-color: rgba(255,255,255,0.10); }
 </style>
 </head>
 <body>
@@ -290,6 +313,7 @@
   const KEY = 'asConstruction_obras_v1';
   const KEY_IA = 'asConstruction_apiKey';
   const KEY_THEME = 'asConstruction_theme';
+  const KEY_ORC = 'asConstruction_orcamentos_v1';
   let temaEscuro = localStorage.getItem(KEY_THEME) === 'dark';
   if (temaEscuro) document.documentElement.setAttribute('data-theme', 'dark');
   let chatMensagens = [];
@@ -311,6 +335,7 @@
   ];
 
   let estado = carregar();
+  let orcamentos = carregarOrcamentos();
   let telaAtual = 'home';
   let obraAtualId = null;
   let abaAtual = 'resumo';
@@ -410,6 +435,8 @@
       root.innerHTML = renderBackup();
     } else if (telaAtual === 'painel') {
       root.innerHTML = renderPainel();
+    } else if (telaAtual === 'calculadora') {
+      root.innerHTML = renderCalculadora();
     }
   }
 
@@ -448,6 +475,7 @@
     html += '<button class="btn-primary" onclick="abrirModalNovaObra()">+ Adicionar Nova Obra</button>';
     html += '<button class="btn-secondary" onclick="abrirPainel()">Painel Comparativo</button>';
     html += '<button class="btn-secondary" onclick="abrirBackup()">Backup / Restaurar</button>';
+    html += '<button class="btn-secondary" onclick="abrirCalculadora()">Calculadora</button>';
     html += '</div>';
 
     if (estado.obras.length === 0) {
@@ -1315,6 +1343,19 @@
 
     if (obra.nota) ctx += '\nANOTAÇÕES: ' + obra.nota.substring(0, 500) + '\n';
 
+    const orcs = carregarOrcamentos();
+    if (orcs.length > 0) {
+      ctx += '\nORÇAMENTOS SALVOS (' + orcs.length + '):\n';
+      orcs.forEach(orc => {
+        ctx += '- "' + orc.nome + '"' + (orc.cliente ? ' (' + orc.cliente + ')' : '');
+        ctx += ': custo previsto ' + brl(orc.custoTotal);
+        ctx += ', preço sugerido ' + brl(orc.precoVenda);
+        ctx += ', margem ' + orc.margem.toFixed(1) + '%';
+        const saude = orc.margem >= 20 ? 'Saudável' : orc.margem >= 10 ? 'Apertada' : orc.margem >= 0 ? 'Crítica' : 'Prejuízo';
+        ctx += ' (' + saude + ')\n';
+      });
+    }
+
     return ctx;
   }
 
@@ -1601,6 +1642,299 @@
     });
 
     html += '</tbody></table></div></div>';
+    return html;
+  }
+
+  // ============ CALCULADORA ============
+  function carregarOrcamentos() {
+    try {
+      const raw = localStorage.getItem(KEY_ORC);
+      if (raw) return JSON.parse(raw);
+    } catch(e) {}
+    return [];
+  }
+
+  function salvarOrcamentos() {
+    try {
+      localStorage.setItem(KEY_ORC, JSON.stringify(orcamentos));
+    } catch(e) {
+      alert('Erro ao salvar orçamento: ' + e.message);
+    }
+  }
+
+  function abrirCalculadora() {
+    telaAtual = 'calculadora';
+    render();
+  }
+
+  function calcOrcDados() {
+    const trabalhadores = parseFloat(document.getElementById('orc-trab')?.value) || 0;
+    const dias = parseFloat(document.getElementById('orc-dias')?.value) || 0;
+    const valorDia = parseNum(document.getElementById('orc-valordia')?.value || '0');
+    const totalDiarias = trabalhadores * dias * valorDia;
+    const totalEmpreitadas = parseNum(document.getElementById('orc-empreitadas')?.value || '0');
+    const totalMaterial = parseNum(document.getElementById('orc-material')?.value || '0');
+    const totalAvulsos = parseNum(document.getElementById('orc-avulsos')?.value || '0');
+    const custoTotal = totalDiarias + totalEmpreitadas + totalMaterial + totalAvulsos;
+    const impostoPct = parseFloat(document.getElementById('orc-imposto')?.value) || 0;
+    const modo = document.querySelector('.orc-modo-pill.active')?.dataset.modo || 'A';
+    const margemDesejada = parseFloat(document.getElementById('orc-margem')?.value) || 0;
+    const budgetCliente = parseNum(document.getElementById('orc-budget')?.value || '0');
+
+    let precoVenda = 0, imposto = 0, lucro = 0, margem = 0;
+    if (modo === 'A') {
+      const divisor = 1 - impostoPct / 100 - margemDesejada / 100;
+      precoVenda = divisor > 0 ? custoTotal / divisor : 0;
+      imposto = precoVenda * impostoPct / 100;
+      lucro = precoVenda - custoTotal - imposto;
+      margem = margemDesejada;
+    } else {
+      precoVenda = budgetCliente;
+      imposto = budgetCliente * impostoPct / 100;
+      lucro = budgetCliente - custoTotal - imposto;
+      margem = budgetCliente > 0 ? (lucro / budgetCliente) * 100 : 0;
+    }
+    return { trabalhadores, dias, valorDia, totalDiarias, totalEmpreitadas, totalMaterial, totalAvulsos, custoTotal, impostoPct, modo, margemDesejada, budgetCliente, precoVenda, imposto, lucro, margem };
+  }
+
+  function saudeInfo(margem) {
+    if (margem >= 20) return { classe: 'verde', label: 'Saudável' };
+    if (margem >= 10) return { classe: 'amber', label: 'Apertada' };
+    if (margem >= 0)  return { classe: 'critica', label: 'Crítica' };
+    return { classe: 'prejuizo', label: 'Prejuízo' };
+  }
+
+  function calcularOrcamentoLive() {
+    const el = document.getElementById('orc-resultado');
+    if (!el) return;
+    const d = calcOrcDados();
+    const saude = saudeInfo(d.margem);
+
+    const diariasLine = '<div class="linha"><div class="linha-label">Diárias (' + d.trabalhadores + ' × ' + d.dias + ' dias × ' + brl(d.valorDia) + ')</div><div class="linha-valor">' + brl(d.totalDiarias) + '</div></div>';
+    const empLine = '<div class="linha"><div class="linha-label">Empreitadas previstas</div><div class="linha-valor">' + brl(d.totalEmpreitadas) + '</div></div>';
+    const matLine = '<div class="linha"><div class="linha-label">Material previsto</div><div class="linha-valor">' + brl(d.totalMaterial) + '</div></div>';
+    const avulsosLine = '<div class="linha"><div class="linha-label">Gastos avulsos previstos</div><div class="linha-valor">' + brl(d.totalAvulsos) + '</div></div>';
+    const custoLine = '<div class="linha bold divider"><div class="linha-label">Custo total previsto</div><div class="linha-valor">' + brl(d.custoTotal) + '</div></div>';
+    const impostoLine = '<div class="linha"><div class="linha-label">Imposto (' + d.impostoPct + '%)</div><div class="linha-valor">' + brl(d.imposto) + '</div></div>';
+
+    let precoLine = '';
+    if (d.modo === 'A') {
+      precoLine = '<div class="linha bold divider-purple"><div class="linha-label" style="color:var(--purple); font-weight:700;">PREÇO DE VENDA SUGERIDO</div><div class="linha-valor" style="font-size:18px; color:var(--purple);">' + brl(d.precoVenda) + '</div></div>';
+    } else {
+      precoLine = '<div class="linha bold divider-purple"><div class="linha-label" style="color:var(--purple); font-weight:700;">BUDGET DO CLIENTE</div><div class="linha-valor" style="font-size:18px; color:var(--purple);">' + brl(d.precoVenda) + '</div></div>';
+    }
+
+    const lucroColor = d.lucro >= 0 ? 'var(--green)' : 'var(--red)';
+    const lucroLine = '<div class="linha" style="margin-top:8px;"><div class="linha-label">Lucro líquido</div><div class="linha-valor" style="font-size:17px; font-weight:800; color:' + lucroColor + ';">' + brl(d.lucro) + '</div></div>';
+    const margemLine = '<div class="linha"><div class="linha-label">Margem</div><div class="linha-valor">' + d.margem.toFixed(1) + '%</div></div>';
+    const saudeLine = '<span class="orc-saude ' + saude.classe + '">' + saude.label + '</span>';
+
+    el.innerHTML = diariasLine + empLine + matLine + avulsosLine + custoLine + impostoLine + precoLine + lucroLine + margemLine + saudeLine;
+
+    const diariaTotal = document.getElementById('orc-diaria-total');
+    if (diariaTotal) diariaTotal.textContent = '= ' + brl(d.totalDiarias);
+  }
+
+  function trocarModoOrc(modo) {
+    document.querySelectorAll('.orc-modo-pill').forEach(p => {
+      p.classList.toggle('active', p.dataset.modo === modo);
+    });
+    const campoA = document.getElementById('orc-campo-A');
+    const campoB = document.getElementById('orc-campo-B');
+    if (campoA) campoA.style.display = modo === 'A' ? 'block' : 'none';
+    if (campoB) campoB.style.display = modo === 'B' ? 'block' : 'none';
+    calcularOrcamentoLive();
+  }
+
+  function salvarOrcamento() {
+    const nome = document.getElementById('orc-nome')?.value?.trim() || '';
+    if (!nome) { alert('Informe o nome do orçamento.'); return; }
+    const d = calcOrcDados();
+    if (d.custoTotal <= 0) { alert('Informe pelo menos um custo para calcular.'); return; }
+    const orc = {
+      id: 'orc_' + Date.now(),
+      nome,
+      cliente: document.getElementById('orc-cliente')?.value?.trim() || '',
+      impostoPct: d.impostoPct,
+      trabalhadores: d.trabalhadores,
+      dias: d.dias,
+      valorDia: d.valorDia,
+      totalEmpreitadas: d.totalEmpreitadas,
+      totalMaterial: d.totalMaterial,
+      totalAvulsos: d.totalAvulsos,
+      modo: d.modo,
+      margemDesejada: d.margemDesejada,
+      budgetCliente: d.budgetCliente,
+      custoTotal: d.custoTotal,
+      precoVenda: d.precoVenda,
+      lucro: d.lucro,
+      margem: d.margem,
+      criadaEm: new Date().toISOString()
+    };
+    orcamentos.push(orc);
+    salvarOrcamentos();
+    render();
+  }
+
+  function excluirOrcamento(id) {
+    if (!confirm('Excluir este orçamento?')) return;
+    orcamentos = orcamentos.filter(o => o.id !== id);
+    salvarOrcamentos();
+    render();
+  }
+
+  function transformarEmObra(id) {
+    const orc = orcamentos.find(o => o.id === id);
+    if (!orc) return;
+    if (!confirm('Transformar "' + orc.nome + '" em obra?\n\nO orçamento será removido da lista e uma nova obra será criada com o preço sugerido como contrato.')) return;
+    const novaObra = {
+      id: 'obra_' + Date.now(),
+      nome: orc.nome,
+      cliente: orc.cliente,
+      contrato: orc.precoVenda,
+      impostoPct: orc.impostoPct,
+      dataInicio: hojeISO(),
+      dataPrevisao: '',
+      status: 'andamento',
+      valorMarmita: 30,
+      nota: 'Criada a partir do orçamento salvo em ' + dateBR(orc.criadaEm.split('T')[0]),
+      diarias: [],
+      gastosAvulsos: [],
+      empreitadas: [],
+      trabalhadores: [],
+      recebimentos: [],
+      criadaEm: new Date().toISOString()
+    };
+    estado.obras.push(novaObra);
+    salvar();
+    orcamentos = orcamentos.filter(o => o.id !== id);
+    salvarOrcamentos();
+    abrirObra(novaObra.id);
+  }
+
+  function verDetalhesOrcamento(id) {
+    const orc = orcamentos.find(o => o.id === id);
+    if (!orc) return;
+    const saude = saudeInfo(orc.margem);
+    let html = '<div class="modal-title">' + escapeHtml(orc.nome) + '</div>';
+    if (orc.cliente) html += '<div style="font-size:13px; color:var(--ink-3); margin-bottom:16px;">Cliente: ' + escapeHtml(orc.cliente) + '</div>';
+    html += '<div class="card-title" style="margin-bottom:12px;">BREAKDOWN DE CUSTOS</div>';
+    const totalDiarias = orc.trabalhadores * orc.dias * orc.valorDia;
+    html += '<div class="linha"><div class="linha-label">Diárias (' + orc.trabalhadores + ' × ' + orc.dias + ' dias × ' + brl(orc.valorDia) + ')</div><div class="linha-valor">' + brl(totalDiarias) + '</div></div>';
+    html += '<div class="linha"><div class="linha-label">Empreitadas previstas</div><div class="linha-valor">' + brl(orc.totalEmpreitadas) + '</div></div>';
+    html += '<div class="linha"><div class="linha-label">Material previsto</div><div class="linha-valor">' + brl(orc.totalMaterial) + '</div></div>';
+    html += '<div class="linha"><div class="linha-label">Gastos avulsos</div><div class="linha-valor">' + brl(orc.totalAvulsos) + '</div></div>';
+    html += '<div class="linha bold divider"><div class="linha-label">Custo total</div><div class="linha-valor">' + brl(orc.custoTotal) + '</div></div>';
+    html += '<div class="linha"><div class="linha-label">Imposto (' + orc.impostoPct + '%)</div><div class="linha-valor">' + brl(orc.precoVenda * orc.impostoPct / 100) + '</div></div>';
+    html += '<div class="linha bold divider-purple"><div class="linha-label" style="color:var(--purple);">' + (orc.modo === 'A' ? 'PREÇO DE VENDA SUGERIDO' : 'BUDGET DO CLIENTE') + '</div><div class="linha-valor" style="color:var(--purple); font-size:17px;">' + brl(orc.precoVenda) + '</div></div>';
+    const lucroColor = orc.lucro >= 0 ? 'var(--green)' : 'var(--red)';
+    html += '<div class="linha"><div class="linha-label">Lucro líquido</div><div class="linha-valor" style="color:' + lucroColor + ';">' + brl(orc.lucro) + '</div></div>';
+    html += '<div class="linha"><div class="linha-label">Margem</div><div class="linha-valor">' + orc.margem.toFixed(1) + '%</div></div>';
+    html += '<span class="orc-saude ' + saude.classe + '">' + saude.label + '</span>';
+    html += '<div style="font-size:11px; color:var(--ink-4); margin-top:12px;">Salvo em ' + dateBR(orc.criadaEm.split('T')[0]) + '</div>';
+    html += '<div class="modal-actions"><button class="btn-cancel" onclick="fecharModal()">Fechar</button></div>';
+    document.getElementById('modal-content').innerHTML = html;
+    document.getElementById('modal-bg').classList.add('show');
+  }
+
+  function renderCalculadora() {
+    let html = '<div class="header">';
+    html += '<div class="header-left">';
+    html += '<div class="header-tag">AS CONSTRUCTION</div>';
+    html += '<div class="header-title obra-title">Calculadora de Orçamento</div>';
+    html += '</div>';
+    html += '<button class="btn-theme" onclick="toggleTema()" title="Alternar tema">' + (temaEscuro ? '☀' : '◑') + '</button>';
+    html += '<button class="btn-back" onclick="voltarHome()">← Voltar</button>';
+    html += '</div>';
+
+    html += '<div class="two-col-layout">';
+
+    // Coluna esquerda: formulário
+    html += '<div>';
+    html += '<div class="card">';
+    html += '<div class="card-title">NOVO ORÇAMENTO</div>';
+
+    html += '<label class="field-label">Nome do orçamento</label>';
+    html += '<input type="text" id="orc-nome" placeholder="Ex: Reforma banheiro" oninput="calcularOrcamentoLive()">';
+    html += '<label class="field-label">Cliente</label>';
+    html += '<input type="text" id="orc-cliente" placeholder="Nome do cliente" oninput="calcularOrcamentoLive()">';
+    html += '<label class="field-label">Imposto (%)</label>';
+    html += '<input type="number" id="orc-imposto" value="13" min="0" max="100" step="0.1" oninput="calcularOrcamentoLive()" style="width:100%; padding:13px 14px; font-size:15px; border:1.5px solid rgba(0,0,0,0.10); border-radius:var(--radius-input); font-family:inherit; background:var(--bg); color:var(--ink);">';
+
+    html += '<div class="card-title" style="margin-top:20px; margin-bottom:12px;">CUSTOS PREVISTOS</div>';
+
+    html += '<label class="field-label">Diárias</label>';
+    html += '<div class="diaria-helper">';
+    html += '<input type="number" id="orc-trab" placeholder="Trabalhadores" min="0" oninput="calcularOrcamentoLive()" style="width:100%; padding:13px 14px; font-size:15px; border:1.5px solid rgba(0,0,0,0.10); border-radius:var(--radius-input); font-family:inherit; background:var(--bg); color:var(--ink);">';
+    html += '<span>×</span>';
+    html += '<input type="number" id="orc-dias" placeholder="Dias" min="0" oninput="calcularOrcamentoLive()" style="width:100%; padding:13px 14px; font-size:15px; border:1.5px solid rgba(0,0,0,0.10); border-radius:var(--radius-input); font-family:inherit; background:var(--bg); color:var(--ink);">';
+    html += '<span>×</span>';
+    html += '<input type="text" id="orc-valordia" placeholder="R$/dia" oninput="calcularOrcamentoLive()" style="width:100%; padding:13px 14px; font-size:15px; border:1.5px solid rgba(0,0,0,0.10); border-radius:var(--radius-input); font-family:inherit; background:var(--bg); color:var(--ink);">';
+    html += '</div>';
+    html += '<div class="diaria-total" id="orc-diaria-total">= R$ 0,00</div>';
+
+    html += '<label class="field-label">Empreitadas previstas (R$)</label>';
+    html += '<input type="text" id="orc-empreitadas" placeholder="0,00" oninput="calcularOrcamentoLive()" style="width:100%; padding:13px 14px; font-size:15px; border:1.5px solid rgba(0,0,0,0.10); border-radius:var(--radius-input); font-family:inherit; background:var(--bg); color:var(--ink);">';
+    html += '<label class="field-label">Material previsto (R$)</label>';
+    html += '<input type="text" id="orc-material" placeholder="0,00" oninput="calcularOrcamentoLive()" style="width:100%; padding:13px 14px; font-size:15px; border:1.5px solid rgba(0,0,0,0.10); border-radius:var(--radius-input); font-family:inherit; background:var(--bg); color:var(--ink);">';
+    html += '<label class="field-label">Gastos avulsos previstos (R$)</label>';
+    html += '<input type="text" id="orc-avulsos" placeholder="0,00" oninput="calcularOrcamentoLive()" style="width:100%; padding:13px 14px; font-size:15px; border:1.5px solid rgba(0,0,0,0.10); border-radius:var(--radius-input); font-family:inherit; background:var(--bg); color:var(--ink);">';
+
+    html += '<div class="card-title" style="margin-top:20px; margin-bottom:4px;">MODO DE CÁLCULO</div>';
+    html += '<div class="orc-modo-pills">';
+    html += '<button class="orc-modo-pill active" data-modo="A" onclick="trocarModoOrc(\'A\')">Modo A: Calcular preço</button>';
+    html += '<button class="orc-modo-pill" data-modo="B" onclick="trocarModoOrc(\'B\')">Modo B: Analisar budget</button>';
+    html += '</div>';
+
+    html += '<div id="orc-campo-A">';
+    html += '<label class="field-label">Margem desejada (%)</label>';
+    html += '<input type="number" id="orc-margem" value="20" min="0" max="99" step="0.5" oninput="calcularOrcamentoLive()" style="width:100%; padding:13px 14px; font-size:15px; border:1.5px solid rgba(0,0,0,0.10); border-radius:var(--radius-input); font-family:inherit; background:var(--bg); color:var(--ink);">';
+    html += '</div>';
+    html += '<div id="orc-campo-B" style="display:none;">';
+    html += '<label class="field-label">Budget do cliente (R$)</label>';
+    html += '<input type="text" id="orc-budget" placeholder="0,00" oninput="calcularOrcamentoLive()" style="width:100%; padding:13px 14px; font-size:15px; border:1.5px solid rgba(0,0,0,0.10); border-radius:var(--radius-input); font-family:inherit; background:var(--bg); color:var(--ink);">';
+    html += '</div>';
+
+    html += '<button class="btn-primary" onclick="salvarOrcamento()">Salvar Orçamento</button>';
+    html += '</div></div>';
+
+    // Coluna direita: resultado + lista
+    html += '<div>';
+
+    // Card resultado ao vivo
+    html += '<div class="card resultado">';
+    html += '<div class="card-title">RESULTADO CALCULADO</div>';
+    html += '<div id="orc-resultado"><div class="empty" style="padding:8px 0;">Preencha os custos ao lado para calcular.</div></div>';
+    html += '</div>';
+
+    // Card orçamentos salvos
+    html += '<div class="card">';
+    html += '<div class="card-title">ORÇAMENTOS SALVOS</div>';
+    if (orcamentos.length === 0) {
+      html += '<div class="empty">Nenhum orçamento salvo ainda.</div>';
+    } else {
+      orcamentos.slice().reverse().forEach(orc => {
+        const saude = saudeInfo(orc.margem);
+        html += '<div class="orc-item">';
+        html += '<div class="orc-item-header">';
+        html += '<div><div class="orc-item-nome">' + escapeHtml(orc.nome) + '</div>';
+        if (orc.cliente) html += '<div class="orc-item-cliente">' + escapeHtml(orc.cliente) + '</div>';
+        html += '<div class="orc-item-preco">' + brl(orc.precoVenda) + '</div></div>';
+        html += '<div style="text-align:right; flex-shrink:0;"><div style="font-size:13px; font-weight:700; color:var(--ink);">' + orc.margem.toFixed(1) + '%</div>';
+        html += '<span class="orc-saude ' + saude.classe + '">' + saude.label + '</span></div>';
+        html += '</div>';
+        html += '<div class="orc-item-actions">';
+        html += '<button class="btn-mini" onclick="verDetalhesOrcamento(\'' + orc.id + '\')">Ver detalhes</button>';
+        html += '<button class="btn-mini" style="color:var(--purple); border-color:rgba(115,1,140,0.25);" onclick="transformarEmObra(\'' + orc.id + '\')">Transformar em Obra</button>';
+        html += '<button class="btn-mini danger" onclick="excluirOrcamento(\'' + orc.id + '\')">Excluir</button>';
+        html += '</div></div>';
+      });
+    }
+    html += '</div>';
+
+    html += '</div>';
+    html += '</div>';
+
     return html;
   }
 
