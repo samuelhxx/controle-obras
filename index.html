@@ -9,144 +9,294 @@
 <meta name="theme-color" content="#73018C">
 <title>AS Construction — Controle de Obras</title>
 <style>
+  :root {
+    --ink: #111111;
+    --ink-2: #444444;
+    --ink-3: #888888;
+    --ink-4: #BBBBBB;
+    --surface: #FFFFFF;
+    --bg: #F7F6F4;
+    --purple: #73018C;
+    --purple-dim: #5C0170;
+    --green: #059669;
+    --red: #DC2626;
+    --amber: #D97706;
+    --shadow-card: 0 2px 16px rgba(0,0,0,0.05);
+    --shadow-float: 0 8px 32px rgba(0,0,0,0.09);
+    --radius-card: 16px;
+    --radius-btn: 10px;
+    --radius-input: 10px;
+    --ease: cubic-bezier(0.22, 1, 0.36, 1);
+  }
   * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
-  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif; background: #F8F8F8; color: #1A1A1A; padding: 16px 12px 40px; min-height: 100vh; }
-  .container { max-width: 700px; margin: 0 auto; }
-  .header { background: #73018C; color: #fff; padding: 18px 22px; border-radius: 12px; margin-bottom: 16px; display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Inter', system-ui, sans-serif; font-feature-settings: 'cv11'; background: var(--bg); color: var(--ink-2); padding: 20px 16px 80px; min-height: 100vh; }
+  .container { max-width: 1100px; margin: 0 auto; }
+
+  .header { background: var(--purple); color: #fff; padding: 22px 24px; border-radius: 14px; margin-bottom: 20px; display: flex; align-items: center; justify-content: space-between; gap: 10px; }
   .header-left { flex: 1; min-width: 0; }
-  .header-tag { font-size: 10px; opacity: 0.85; letter-spacing: 1.5px; font-weight: 600; }
-  .header-title { font-size: 18px; font-weight: 700; margin-top: 3px; word-wrap: break-word; }
-  .header-sub { font-size: 12px; opacity: 0.9; margin-top: 3px; }
-  .btn-back { background: rgba(255,255,255,0.2); color: #fff; border: 1px solid rgba(255,255,255,0.4); padding: 8px 12px; border-radius: 8px; font-size: 12px; font-weight: 600; cursor: pointer; font-family: inherit; flex-shrink: 0; }
+  .header-tag { font-size: 9px; opacity: 0.65; letter-spacing: 2.5px; font-weight: 700; text-transform: uppercase; }
+  .header-title { font-size: 26px; font-weight: 800; margin-top: 4px; letter-spacing: -0.5px; word-wrap: break-word; }
+  .header-title.obra-title { font-size: 20px; font-weight: 700; letter-spacing: -0.3px; }
+  .header-sub { font-size: 12px; opacity: 0.75; margin-top: 4px; }
+  .btn-back { background: rgba(255,255,255,0.15); color: #fff; border: 1px solid rgba(255,255,255,0.3); padding: 9px 14px; border-radius: 10px; font-size: 12px; font-weight: 600; cursor: pointer; font-family: inherit; flex-shrink: 0; transition: background 0.15s ease; }
 
-  .tabs { display: flex; gap: 5px; margin-bottom: 14px; flex-wrap: wrap; }
-  .tab { flex: 1 1 auto; min-width: 80px; background: #fff; color: #73018C; border: 2px solid #73018C; padding: 8px 8px; border-radius: 8px; font-size: 12px; font-weight: 600; cursor: pointer; font-family: inherit; }
-  .tab.active { background: #73018C; color: #fff; }
+  .tabs { display: flex; gap: 6px; margin-bottom: 20px; flex-wrap: nowrap; overflow-x: auto; -webkit-overflow-scrolling: touch; scrollbar-width: none; position: sticky; top: 0; z-index: 10; background: var(--bg); padding: 8px 0 10px; }
+  .tabs::-webkit-scrollbar { display: none; }
+  .tab { flex: 0 0 auto; background: rgba(0,0,0,0.06); color: var(--ink-3); border: none; padding: 8px 16px; border-radius: 100px; font-size: 13px; font-weight: 500; cursor: pointer; font-family: inherit; white-space: nowrap; transition: background 0.18s var(--ease), color 0.18s var(--ease); }
+  .tab.active { background: var(--purple); color: #fff; font-weight: 600; }
 
-  .card { background: #fff; border-radius: 12px; padding: 18px; margin-bottom: 14px; border: 1px solid #E8E8E8; }
-  .card-title { font-size: 11px; color: #888; letter-spacing: 1.2px; font-weight: 700; margin-bottom: 12px; }
-  .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
-  .info-label { font-size: 11px; color: #888; }
-  .info-value { font-size: 16px; font-weight: 700; color: #73018C; margin-top: 2px; }
-  .info-value.green { color: #27AE60; }
-  .info-value.red { color: #C0392B; }
-  .info-value.orange { color: #E67E22; }
+  .card { background: var(--surface); border-radius: var(--radius-card); padding: 24px; margin-bottom: 16px; border: none; box-shadow: var(--shadow-card); animation: fadeUp 0.25s var(--ease) both; }
+  .card-title { font-size: 10px; color: var(--ink-3); letter-spacing: 2px; font-weight: 700; text-transform: uppercase; margin-bottom: 20px; }
+  .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  .info-label { font-size: 11px; color: var(--ink-3); }
+  .info-value { font-size: 22px; font-weight: 700; color: var(--ink); margin-top: 4px; letter-spacing: -0.3px; }
+  .info-value.green { color: var(--green); }
+  .info-value.red { color: var(--red); }
+  .info-value.orange { color: var(--amber); }
 
-  .linha { display: flex; justify-content: space-between; align-items: baseline; padding: 5px 0; }
-  .linha-label { font-size: 13px; color: #555; }
-  .linha-valor { font-size: 14px; font-weight: 600; }
-  .linha.bold .linha-label, .linha.bold .linha-valor { font-weight: 700; }
-  .divider { border-top: 2px solid #E8E8E8; margin-top: 8px; padding-top: 8px; }
-  .divider-purple { border-top: 2px solid #73018C; margin-top: 10px; padding-top: 10px; }
+  .linha { display: flex; justify-content: space-between; align-items: baseline; padding: 6px 0; }
+  .linha-label { font-size: 14px; color: var(--ink-2); }
+  .linha-valor { font-size: 14px; font-weight: 600; color: var(--ink); }
+  .linha.bold .linha-label, .linha.bold .linha-valor { font-weight: 700; color: var(--ink); }
+  .divider { border-top: 1px solid rgba(0,0,0,0.07); margin-top: 10px; padding-top: 10px; }
+  .divider-purple { border-top: 1.5px solid var(--purple); margin-top: 12px; padding-top: 12px; }
 
-  .resultado { background: #F3E5F7; border: 2px solid #73018C; }
-  .resultado .card-title { color: #73018C; }
+  .resultado { background: #FAF5FF; border: none; }
+  .resultado .card-title { color: var(--purple); }
   .lucro-row { display: flex; justify-content: space-between; align-items: baseline; }
-  .lucro-label { font-size: 13px; font-weight: 700; color: #73018C; }
-  .lucro-valor { font-size: 22px; font-weight: 700; }
-  .lucro-valor.positive { color: #27AE60; }
-  .lucro-valor.negative { color: #C0392B; }
-  .margem { text-align: right; font-size: 12px; color: #666; margin-top: 4px; }
+  .lucro-label { font-size: 12px; font-weight: 700; color: var(--purple); letter-spacing: 1px; text-transform: uppercase; }
+  .lucro-valor { font-size: 30px; font-weight: 800; letter-spacing: -0.8px; line-height: 1; }
+  .lucro-valor.positive { color: var(--green); }
+  .lucro-valor.negative { color: var(--red); }
+  .margem { text-align: right; font-size: 12px; color: var(--ink-3); margin-top: 6px; }
 
-  label.field-label { display: block; font-size: 12px; color: #666; font-weight: 600; margin-top: 8px; margin-bottom: 4px; }
-  input[type="date"], input[type="text"], select, textarea { width: 100%; padding: 11px; font-size: 15px; border: 1px solid #DDD; border-radius: 8px; font-family: inherit; background: #fff; color: #1A1A1A; }
+  label.field-label { display: block; font-size: 12px; color: var(--ink-3); font-weight: 600; margin-top: 14px; margin-bottom: 6px; letter-spacing: 0.3px; }
+  input[type="date"], input[type="text"], input[type="number"], select, textarea { width: 100%; padding: 13px 14px; font-size: 15px; border: 1.5px solid rgba(0,0,0,0.10); border-radius: var(--radius-input); font-family: inherit; background: var(--bg); color: var(--ink); transition: border-color 0.15s ease, box-shadow 0.15s ease; }
+  input:focus, select:focus, textarea:focus { border-color: var(--purple); box-shadow: 0 0 0 3px rgba(115,1,140,0.10); outline: none; background: #fff; }
   textarea { min-height: 80px; resize: vertical; }
-  select { -webkit-appearance: none; appearance: none; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23666' d='M6 9L1 4h10z'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 12px center; padding-right: 32px; }
+  select { -webkit-appearance: none; appearance: none; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23888' d='M6 9L1 4h10z'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 14px center; padding-right: 36px; }
 
-  .trab-card { border: 1px solid #DDD; border-radius: 8px; padding: 12px; margin-bottom: 8px; background: #fff; }
-  .trab-card.selected { border: 2px solid #73018C; background: #F3E5F7; }
-  .trab-nome { font-weight: 700; font-size: 14px; margin-bottom: 6px; }
+  .trab-card { border: 1.5px solid rgba(0,0,0,0.08); border-radius: 12px; padding: 14px; margin-bottom: 10px; background: var(--bg); }
+  .trab-card.selected { border-color: var(--purple); background: #FAF5FF; }
+  .trab-nome { font-weight: 700; font-size: 14px; color: var(--ink); margin-bottom: 8px; }
   .btn-row { display: flex; gap: 6px; flex-wrap: wrap; }
-  .btn-toggle { flex: 1 1 auto; min-width: 80px; padding: 9px; font-size: 11px; border-radius: 6px; cursor: pointer; font-weight: 600; border: 1px solid #CCC; background: #fff; color: #333; font-family: inherit; }
-  .btn-toggle.active { border: 2px solid #73018C; background: #73018C; color: #fff; }
+  .btn-toggle { flex: 1 1 auto; min-width: 80px; padding: 9px; font-size: 12px; border-radius: 8px; cursor: pointer; font-weight: 500; border: 1.5px solid rgba(0,0,0,0.10); background: #fff; color: var(--ink-2); font-family: inherit; transition: all 0.15s ease; }
+  .btn-toggle.active { border-color: var(--purple); background: var(--purple); color: #fff; font-weight: 600; }
 
-  .btn-primary { width: 100%; background: #73018C; color: #fff; border: none; padding: 14px; border-radius: 8px; font-size: 14px; font-weight: 700; cursor: pointer; margin-top: 10px; font-family: inherit; }
-  .btn-danger { width: 100%; background: transparent; color: #C0392B; border: 1px solid #C0392B; padding: 10px; border-radius: 8px; font-size: 12px; cursor: pointer; font-weight: 600; margin-top: 8px; font-family: inherit; }
-  .btn-secondary { width: 100%; background: #fff; color: #73018C; border: 2px solid #73018C; padding: 12px; border-radius: 8px; font-size: 14px; font-weight: 700; cursor: pointer; margin-top: 10px; font-family: inherit; }
+  .btn-primary { width: 100%; background: var(--purple); color: #fff; border: none; padding: 15px 20px; border-radius: var(--radius-btn); font-size: 15px; font-weight: 600; cursor: pointer; margin-top: 12px; font-family: inherit; transition: background 0.2s var(--ease), transform 0.15s var(--ease), box-shadow 0.2s ease; }
+  .btn-danger { width: 100%; background: transparent; color: var(--red); border: 1.5px solid rgba(220,38,38,0.3); padding: 12px; border-radius: var(--radius-btn); font-size: 13px; cursor: pointer; font-weight: 600; margin-top: 10px; font-family: inherit; transition: background 0.15s ease; }
+  .btn-secondary { width: 100%; background: transparent; color: var(--purple); border: 1.5px solid rgba(115,1,140,0.25); padding: 14px 20px; border-radius: var(--radius-btn); font-size: 15px; font-weight: 600; cursor: pointer; margin-top: 12px; font-family: inherit; transition: background 0.2s var(--ease); }
 
-  .lancamento { display: flex; justify-content: space-between; align-items: center; padding: 10px 0; border-bottom: 1px solid #F0F0F0; }
-  .lanc-desc { font-size: 13px; font-weight: 600; }
-  .lanc-data { font-size: 11px; color: #888; margin-top: 2px; }
-  .lanc-tipo { font-size: 10px; color: #73018C; font-weight: 700; text-transform: uppercase; }
-  .lanc-categoria { display: inline-block; font-size: 10px; padding: 2px 6px; border-radius: 4px; background: #F3E5F7; color: #73018C; font-weight: 600; margin-right: 6px; }
+  .lancamento { display: flex; justify-content: space-between; align-items: center; padding: 12px 0; border-bottom: 1px solid rgba(0,0,0,0.05); }
+  .lanc-desc { font-size: 14px; font-weight: 600; color: var(--ink); }
+  .lanc-data { font-size: 12px; color: var(--ink-3); margin-top: 2px; }
+  .lanc-tipo { font-size: 10px; color: var(--purple); font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 2px; }
+  .lanc-categoria { display: inline-block; font-size: 10px; padding: 3px 8px; border-radius: 100px; background: rgba(115,1,140,0.08); color: var(--purple); font-weight: 600; margin-right: 4px; }
   .lanc-right { display: flex; align-items: center; gap: 10px; }
-  .lanc-valor { font-size: 14px; font-weight: 700; color: #73018C; }
-  .lanc-valor.entrada { color: #27AE60; }
-  .btn-remove { background: transparent; border: none; color: #C0392B; cursor: pointer; font-size: 22px; padding: 0 6px; line-height: 1; font-family: inherit; }
+  .lanc-valor { font-size: 15px; font-weight: 700; color: var(--ink); }
+  .lanc-valor.entrada { color: var(--green); }
+  .btn-remove { background: transparent; border: none; color: var(--ink-4); cursor: pointer; font-size: 20px; padding: 0 4px; line-height: 1; font-family: inherit; transition: color 0.15s ease; }
 
-  .empreitada-form { background: #FAFAFA; border: 1px dashed #CCC; border-radius: 8px; padding: 14px; margin-bottom: 12px; }
-  .empreitada-item { border: 1px solid #E8E8E8; border-radius: 8px; padding: 14px; margin-bottom: 10px; }
-  .empreitada-item.pago { background: #F3E5F7; border-color: #73018C; }
+  .empreitada-form { background: var(--bg); border: 1.5px dashed rgba(0,0,0,0.10); border-radius: 12px; padding: 16px; margin-bottom: 14px; }
+  .empreitada-item { border: 1.5px solid rgba(0,0,0,0.08); border-radius: 12px; padding: 16px; margin-bottom: 12px; }
+  .empreitada-item.pago { background: #FAF5FF; border-color: rgba(115,1,140,0.2); }
   .emp-row { display: flex; justify-content: space-between; align-items: center; gap: 10px; }
   .emp-info { flex: 1; min-width: 0; }
-  .emp-label { font-size: 14px; font-weight: 600; word-wrap: break-word; }
-  .emp-sub { font-size: 11px; color: #888; margin-top: 2px; }
-  .emp-valor { font-size: 16px; font-weight: 700; color: #73018C; margin-top: 4px; }
-  .btn-pago { padding: 8px 12px; border-radius: 8px; font-size: 11px; font-weight: 700; cursor: pointer; background: #fff; color: #333; border: 1px solid #CCC; font-family: inherit; flex-shrink: 0; }
-  .btn-pago.ativo { background: #27AE60; color: #fff; border: 2px solid #27AE60; }
-  .emp-actions { display: flex; gap: 6px; margin-top: 8px; }
-  .btn-mini { font-size: 11px; padding: 6px 10px; border-radius: 6px; cursor: pointer; font-weight: 600; font-family: inherit; border: 1px solid #CCC; background: #fff; color: #555; }
-  .btn-mini.danger { border-color: #C0392B; color: #C0392B; }
+  .emp-label { font-size: 15px; font-weight: 600; color: var(--ink); word-wrap: break-word; }
+  .emp-sub { font-size: 12px; color: var(--ink-3); margin-top: 3px; }
+  .emp-valor { font-size: 17px; font-weight: 700; color: var(--purple); margin-top: 4px; letter-spacing: -0.2px; }
+  .btn-pago { padding: 8px 14px; border-radius: 8px; font-size: 12px; font-weight: 600; cursor: pointer; background: var(--surface); color: var(--ink-2); border: 1.5px solid rgba(0,0,0,0.12); font-family: inherit; flex-shrink: 0; transition: all 0.15s ease; }
+  .btn-pago.ativo { background: var(--green); color: #fff; border-color: var(--green); }
+  .emp-actions { display: flex; gap: 6px; margin-top: 10px; }
+  .btn-mini { font-size: 12px; padding: 7px 12px; border-radius: 8px; cursor: pointer; font-weight: 600; font-family: inherit; border: 1.5px solid rgba(0,0,0,0.10); background: var(--surface); color: var(--ink-2); transition: all 0.15s ease; }
+  .btn-mini.danger { border-color: rgba(220,38,38,0.3); color: var(--red); }
 
-  .empty { font-size: 13px; color: #888; text-align: center; padding: 20px; }
-  .equipe-item { display: flex; justify-content: space-between; align-items: center; padding: 10px 0; border-bottom: 1px solid #F0F0F0; }
-  .btn-remove-trab { background: transparent; border: 1px solid #C0392B; color: #C0392B; cursor: pointer; font-size: 11px; padding: 6px 10px; border-radius: 6px; font-weight: 600; font-family: inherit; }
+  .empty { font-size: 13px; color: var(--ink-3); text-align: center; padding: 24px; }
+  .equipe-item { display: flex; justify-content: space-between; align-items: center; padding: 12px 0; border-bottom: 1px solid rgba(0,0,0,0.05); }
+  .btn-remove-trab { background: transparent; border: 1.5px solid rgba(220,38,38,0.3); color: var(--red); cursor: pointer; font-size: 12px; padding: 7px 12px; border-radius: 8px; font-weight: 600; font-family: inherit; transition: background 0.15s ease; }
 
-  .obra-card { background: #fff; border-radius: 12px; padding: 16px; margin-bottom: 12px; border: 1px solid #E8E8E8; cursor: pointer; }
-  .obra-card:active { background: #F9F9F9; }
-  .obra-header-row { display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; margin-bottom: 10px; }
-  .obra-nome { font-size: 16px; font-weight: 700; color: #1A1A1A; word-wrap: break-word; flex: 1; }
-  .obra-cliente { font-size: 12px; color: #888; margin-top: 2px; }
-  .obra-prazo { font-size: 11px; color: #888; margin-top: 4px; }
-  .obra-stats { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 8px; }
-  .obra-stat-label { font-size: 10px; color: #888; letter-spacing: 0.5px; }
-  .obra-stat-val { font-size: 14px; font-weight: 700; margin-top: 1px; }
-  .badge { display: inline-block; font-size: 10px; padding: 3px 8px; border-radius: 20px; font-weight: 700; }
-  .badge.purple { background: #F3E5F7; color: #73018C; }
-  .badge.green { background: #D4F4DD; color: #27AE60; }
-  .badge.orange { background: #FCE5CB; color: #E67E22; }
-  .badge.gray { background: #E8E8E8; color: #666; }
-  .badge.red { background: #FADBD8; color: #C0392B; }
+  .obra-card { background: var(--surface); border-radius: var(--radius-card); padding: 20px 22px; margin-bottom: 0; border: none; box-shadow: var(--shadow-card); cursor: pointer; transition: transform 0.2s var(--ease), box-shadow 0.2s ease; animation: fadeUp 0.25s var(--ease) both; }
+  .obra-card:active { opacity: 0.85; }
+  .obra-header-row { display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; margin-bottom: 12px; }
+  .obra-nome { font-size: 17px; font-weight: 700; color: var(--ink); word-wrap: break-word; flex: 1; }
+  .obra-cliente { font-size: 12px; color: var(--ink-3); margin-top: 3px; }
+  .obra-prazo { font-size: 11px; color: var(--ink-4); margin-top: 4px; }
+  .obra-stats { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 10px; }
+  .obra-stat-label { font-size: 10px; color: var(--ink-3); letter-spacing: 0.5px; font-weight: 600; text-transform: uppercase; }
+  .obra-stat-val { font-size: 16px; font-weight: 700; margin-top: 2px; letter-spacing: -0.2px; }
+  .badge { display: inline-block; font-size: 10px; padding: 4px 10px; border-radius: 100px; font-weight: 600; letter-spacing: 0.2px; }
+  .badge.purple { background: rgba(115,1,140,0.08); color: var(--purple); }
+  .badge.green { background: rgba(5,150,105,0.10); color: var(--green); }
+  .badge.orange { background: rgba(217,119,6,0.10); color: var(--amber); }
+  .badge.gray { background: rgba(0,0,0,0.06); color: var(--ink-3); }
+  .badge.red { background: rgba(220,38,38,0.08); color: var(--red); }
 
-  .footer { text-align: center; font-size: 11px; color: #999; margin-top: 20px; }
+  .footer { text-align: center; font-size: 11px; color: var(--ink-4); margin-top: 24px; }
   .hidden { display: none; }
 
-  .modal-bg { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 100; display: none; align-items: center; justify-content: center; padding: 20px; }
-  .modal-bg.show { display: flex; }
-  .modal { background: #fff; border-radius: 12px; padding: 22px; max-width: 500px; width: 100%; max-height: 90vh; overflow-y: auto; }
-  .modal-title { font-size: 18px; font-weight: 700; color: #73018C; margin-bottom: 14px; }
-  .modal-actions { display: flex; gap: 8px; margin-top: 14px; }
+  .modal-bg { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.45); z-index: 100; display: flex; align-items: flex-end; justify-content: center; padding: 20px; opacity: 0; pointer-events: none; transition: opacity 0.2s ease; }
+  .modal-bg.show { opacity: 1; pointer-events: all; }
+  .modal { background: var(--surface); border-radius: 20px; padding: 28px; max-width: 500px; width: 100%; max-height: 90vh; overflow-y: auto; transform: translateY(24px) scale(0.98); opacity: 0; transition: transform 0.28s var(--ease), opacity 0.2s ease; }
+  .modal-bg.show .modal { transform: translateY(0) scale(1); opacity: 1; }
+  .modal-title { font-size: 18px; font-weight: 700; color: var(--ink); margin-bottom: 16px; letter-spacing: -0.2px; }
+  .modal-actions { display: flex; gap: 8px; margin-top: 16px; }
   .modal-actions button { flex: 1; }
-  .btn-cancel { background: #fff; color: #555; border: 1px solid #CCC; padding: 12px; border-radius: 8px; font-size: 13px; font-weight: 600; cursor: pointer; font-family: inherit; }
+  .btn-cancel { background: var(--bg); color: var(--ink-2); border: 1.5px solid rgba(0,0,0,0.10); padding: 13px; border-radius: var(--radius-btn); font-size: 14px; font-weight: 600; cursor: pointer; font-family: inherit; }
 
   .chart-container { padding: 10px 0; }
-  .chart-bar-wrapper { display: flex; align-items: flex-end; gap: 8px; height: 140px; margin-top: 10px; padding: 0 4px; border-bottom: 1px solid #E8E8E8; padding-bottom: 4px; }
+  .chart-bar-wrapper { display: flex; align-items: flex-end; gap: 8px; height: 140px; margin-top: 10px; padding: 0 4px; border-bottom: 1px solid rgba(0,0,0,0.07); padding-bottom: 4px; }
   .chart-bar-col { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 4px; }
-  .chart-bar { width: 100%; max-width: 32px; background: #73018C; border-radius: 4px 4px 0 0; transition: height 0.3s; min-height: 2px; }
-  .chart-bar-label { font-size: 10px; color: #888; font-weight: 600; }
-  .chart-bar-val { font-size: 9px; color: #73018C; font-weight: 700; }
+  .chart-bar { width: 100%; max-width: 32px; background: var(--purple); border-radius: 6px 6px 0 0; transition: height 0.3s; min-height: 2px; opacity: 0.85; }
+  .chart-bar-label { font-size: 10px; color: var(--ink-3); font-weight: 600; }
+  .chart-bar-val { font-size: 9px; color: var(--purple); font-weight: 700; }
 
   .resumo-badges { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 8px; }
 
-  .backup-area { background: #FAFAFA; border: 1px dashed #CCC; border-radius: 8px; padding: 14px; margin-top: 10px; }
-  .backup-text { background: #fff; padding: 10px; border-radius: 6px; font-family: monospace; font-size: 11px; max-height: 120px; overflow-y: auto; word-break: break-all; border: 1px solid #DDD; }
+  .backup-area { background: var(--bg); border: 1.5px dashed rgba(0,0,0,0.10); border-radius: 12px; padding: 14px; margin-top: 12px; }
+  .backup-text { background: var(--surface); padding: 10px; border-radius: 8px; font-family: monospace; font-size: 11px; max-height: 120px; overflow-y: auto; word-break: break-all; border: 1px solid rgba(0,0,0,0.07); }
 
-  .chat-area { max-height: 360px; overflow-y: auto; padding: 8px 0; margin-bottom: 12px; }
-  .chat-welcome { font-size: 13px; color: #666; background: #F3E5F7; border-radius: 8px; padding: 12px; margin-bottom: 8px; }
+  .chat-area { max-height: 360px; overflow-y: auto; padding: 8px 0; margin-bottom: 14px; }
+  .chat-welcome { font-size: 13px; color: var(--ink-2); background: rgba(115,1,140,0.06); border-radius: 12px; padding: 14px; margin-bottom: 10px; line-height: 1.5; }
   .chat-msg { display: flex; margin-bottom: 10px; }
   .chat-user { justify-content: flex-end; }
   .chat-ai { justify-content: flex-start; }
-  .chat-bubble { max-width: 80%; padding: 10px 14px; border-radius: 12px; font-size: 13px; line-height: 1.5; word-wrap: break-word; }
-  .chat-bubble-user { background: #73018C; color: #fff; border-radius: 12px 12px 2px 12px; }
-  .chat-bubble-ai { background: #F0F0F0; color: #1A1A1A; border-radius: 12px 12px 12px 2px; }
+  .chat-bubble { max-width: 80%; padding: 12px 16px; border-radius: 14px; font-size: 14px; line-height: 1.5; word-wrap: break-word; }
+  .chat-bubble-user { background: var(--purple); color: #fff; border-radius: 14px 14px 2px 14px; }
+  .chat-bubble-ai { background: #F3F3F3; color: var(--ink); border-radius: 14px 14px 14px 2px; }
   .chat-loading { display: flex; gap: 4px; align-items: center; padding: 12px 16px; }
-  .chat-loading span { width: 8px; height: 8px; background: #73018C; border-radius: 50%; animation: chatdot 1.2s infinite; }
+  .chat-loading span { width: 8px; height: 8px; background: var(--purple); border-radius: 50%; animation: chatdot 1.2s infinite; }
   .chat-loading span:nth-child(2) { animation-delay: 0.2s; }
   .chat-loading span:nth-child(3) { animation-delay: 0.4s; }
   @keyframes chatdot { 0%, 80%, 100% { opacity: 0.2; transform: scale(0.8); } 40% { opacity: 1; transform: scale(1); } }
   .chat-input-area { display: flex; gap: 8px; align-items: flex-end; margin-top: 8px; }
   .chat-input { flex: 1; min-height: 48px; max-height: 120px; resize: vertical; font-size: 14px; margin: 0; }
-  .chat-send-btn { width: auto; margin-top: 0; padding: 12px 16px; flex-shrink: 0; }
+  .chat-send-btn { width: auto; margin-top: 0; padding: 13px 18px; flex-shrink: 0; }
+
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(10px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+  @keyframes fadeIn {
+    from { opacity: 0; }
+    to   { opacity: 1; }
+  }
+  .aba-content { animation: fadeIn 0.18s ease both; }
+
+  .obras-grid { display: flex; flex-direction: column; gap: 14px; margin-top: 20px; }
+  .home-actions { display: flex; flex-direction: column; gap: 10px; margin-top: 8px; }
+  .home-actions .btn-primary, .home-actions .btn-secondary { margin-top: 0; }
+  .two-col-layout > * { margin-bottom: 0; }
+  .resumo-cols > * { margin-bottom: 0; }
+
+  @media (hover: hover) {
+    .obra-card:hover { transform: translateY(-3px); box-shadow: var(--shadow-float); }
+    .btn-primary:hover { background: var(--purple-dim); transform: translateY(-1px); box-shadow: 0 4px 16px rgba(115,1,140,0.25); }
+    .btn-primary:active { transform: translateY(0); }
+    .btn-secondary:hover { background: rgba(115,1,140,0.05); }
+    .tab:hover:not(.active) { background: rgba(0,0,0,0.09); }
+    .btn-back:hover { background: rgba(255,255,255,0.25); }
+    .btn-danger:hover { background: rgba(220,38,38,0.05); }
+    .btn-remove-trab:hover { background: rgba(220,38,38,0.05); }
+    .btn-remove:hover { color: var(--red); }
+  }
+
+  @media (min-width: 768px) {
+    body { padding: 24px 20px 80px; }
+    .header-title { font-size: 28px; }
+    .header-title.obra-title { font-size: 22px; }
+    .obras-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+    .home-actions { flex-direction: row; gap: 12px; }
+    .home-actions .btn-primary, .home-actions .btn-secondary { width: auto; flex: 1; }
+    .two-col-layout { display: grid; grid-template-columns: 1fr 1.3fr; gap: 16px; align-items: start; }
+    .resumo-cols { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+    .resumo-cols > :last-child { grid-column: 1 / -1; }
+  }
+
+  @media (min-width: 1024px) {
+    body { padding: 28px 24px 80px; }
+    .obras-grid { grid-template-columns: repeat(3, 1fr); }
+    .resumo-cols { grid-template-columns: 1fr 1fr 1fr; }
+    .resumo-cols > :last-child { grid-column: auto; }
+  }
+
+  /* Dark mode */
+  [data-theme="dark"] {
+    --ink: #F0F0F0;
+    --ink-2: #AAAAAA;
+    --ink-3: #666666;
+    --ink-4: #444444;
+    --surface: #1C1C1E;
+    --bg: #111111;
+    --shadow-card: 0 2px 16px rgba(0,0,0,0.4);
+    --shadow-float: 0 8px 32px rgba(0,0,0,0.6);
+  }
+  [data-theme="dark"] .resultado { background: #1E1430; }
+  [data-theme="dark"] .trab-card { background: #1C1C1E; }
+  [data-theme="dark"] .trab-card.selected { background: #1E1430; }
+  [data-theme="dark"] .empreitada-form { background: #1C1C1E; }
+  [data-theme="dark"] .empreitada-item { background: #1C1C1E; }
+  [data-theme="dark"] .empreitada-item.pago { background: #1E1430; }
+  [data-theme="dark"] .chat-bubble-ai { background: #2C2C2E; color: var(--ink); }
+  [data-theme="dark"] .chat-welcome { background: rgba(115,1,140,0.15); }
+  [data-theme="dark"] .backup-text { background: #1C1C1E; }
+  [data-theme="dark"] input[type="date"],
+  [data-theme="dark"] input[type="text"],
+  [data-theme="dark"] input[type="number"],
+  [data-theme="dark"] select,
+  [data-theme="dark"] textarea { background: #1C1C1E; color: var(--ink); border-color: rgba(255,255,255,0.10); }
+  [data-theme="dark"] input:focus,
+  [data-theme="dark"] select:focus,
+  [data-theme="dark"] textarea:focus { background: #2C2C2E; }
+  [data-theme="dark"] .btn-toggle { background: #2C2C2E; color: var(--ink-2); border-color: rgba(255,255,255,0.10); }
+  [data-theme="dark"] .btn-cancel { background: #2C2C2E; }
+  [data-theme="dark"] .btn-mini { background: #2C2C2E; color: var(--ink-2); border-color: rgba(255,255,255,0.08); }
+  [data-theme="dark"] .btn-pago { background: #2C2C2E; border-color: rgba(255,255,255,0.10); }
+
+  /* Dark mode toggle button */
+  .btn-theme { background: rgba(255,255,255,0.15); color: #fff; border: 1px solid rgba(255,255,255,0.3); padding: 8px 11px; border-radius: 10px; font-size: 15px; cursor: pointer; font-family: inherit; flex-shrink: 0; transition: background 0.15s ease; line-height: 1; }
+  @media (hover: hover) { .btn-theme:hover { background: rgba(255,255,255,0.25); } }
+
+  /* Alert badges on obra cards */
+  .obra-alerts { display: flex; gap: 4px; flex-wrap: wrap; margin-top: 10px; }
+  .alerta { display: inline-flex; align-items: center; font-size: 10px; padding: 3px 8px; border-radius: 100px; font-weight: 600; letter-spacing: 0.2px; }
+  .alerta.red { background: rgba(220,38,38,0.10); color: var(--red); }
+  .alerta.amber { background: rgba(217,119,6,0.10); color: var(--amber); }
+
+  /* Painel comparativo */
+  .painel-table { width: 100%; border-collapse: collapse; }
+  .painel-table th { font-size: 10px; color: var(--ink-3); letter-spacing: 1.5px; font-weight: 700; text-transform: uppercase; padding: 0 14px 14px 0; text-align: left; border-bottom: 1px solid rgba(0,0,0,0.07); }
+  .painel-table td { padding: 14px 14px 14px 0; border-bottom: 1px solid rgba(0,0,0,0.04); vertical-align: middle; }
+  .painel-table tr:last-child td { border-bottom: none; }
+  .painel-table tbody tr { cursor: pointer; transition: background 0.12s ease; }
+  .painel-table tbody tr:hover { background: rgba(0,0,0,0.02); }
+  [data-theme="dark"] .painel-table tbody tr:hover { background: rgba(255,255,255,0.03); }
+  .painel-obra-nome { font-size: 14px; font-weight: 700; color: var(--ink); }
+  .painel-obra-cliente { font-size: 11px; color: var(--ink-3); margin-top: 2px; }
+  .margem-bar-wrap { display: flex; align-items: center; gap: 8px; }
+  .margem-bar { height: 6px; border-radius: 3px; min-width: 2px; flex-shrink: 0; transition: width 0.3s var(--ease); }
+  @media (max-width: 767px) { .painel-col-hide { display: none; } }
+
+  /* Calculadora de Orçamento */
+  .orc-modo-pills { display: flex; gap: 6px; margin: 16px 0 8px; }
+  .orc-modo-pill { flex: 1; padding: 10px; border-radius: 100px; border: 1.5px solid rgba(0,0,0,0.10); background: var(--bg); color: var(--ink-3); font-size: 13px; font-weight: 500; cursor: pointer; font-family: inherit; text-align: center; transition: all 0.18s var(--ease); }
+  .orc-modo-pill.active { background: var(--purple); color: #fff; border-color: var(--purple); font-weight: 600; }
+  .orc-saude { font-size: 12px; font-weight: 700; padding: 4px 12px; border-radius: 100px; display: inline-block; margin-top: 8px; letter-spacing: 0.3px; }
+  .orc-saude.verde { background: rgba(5,150,105,0.10); color: var(--green); }
+  .orc-saude.amber { background: rgba(217,119,6,0.10); color: var(--amber); }
+  .orc-saude.critica { background: rgba(220,38,38,0.08); color: var(--red); }
+  .orc-saude.prejuizo { background: rgba(220,38,38,0.15); color: var(--red); }
+  .diaria-helper { display: flex; gap: 8px; align-items: center; }
+  .diaria-helper input { flex: 1; min-width: 0; }
+  .diaria-helper span { font-size: 18px; color: var(--ink-3); flex-shrink: 0; line-height: 1; }
+  .diaria-total { font-size: 13px; color: var(--ink-3); margin-top: 6px; }
+  .orc-item { border: 1.5px solid rgba(0,0,0,0.08); border-radius: 12px; padding: 14px 16px; margin-bottom: 10px; background: var(--bg); }
+  .orc-item-header { display: flex; justify-content: space-between; align-items: flex-start; gap: 8px; }
+  .orc-item-nome { font-size: 14px; font-weight: 700; color: var(--ink); }
+  .orc-item-cliente { font-size: 12px; color: var(--ink-3); margin-top: 2px; }
+  .orc-item-preco { font-size: 17px; font-weight: 700; color: var(--purple); margin-top: 6px; letter-spacing: -0.2px; }
+  .orc-item-actions { display: flex; gap: 6px; margin-top: 10px; flex-wrap: wrap; }
+  [data-theme="dark"] .orc-item { background: #1C1C1E; }
+  [data-theme="dark"] .orc-modo-pill { background: #1C1C1E; border-color: rgba(255,255,255,0.10); }
 </style>
 </head>
 <body>
@@ -162,6 +312,10 @@
 <script>
   const KEY = 'asConstruction_obras_v1';
   const KEY_IA = 'asConstruction_apiKey';
+  const KEY_THEME = 'asConstruction_theme';
+  const KEY_ORC = 'asConstruction_orcamentos_v1';
+  let temaEscuro = localStorage.getItem(KEY_THEME) === 'dark';
+  if (temaEscuro) document.documentElement.setAttribute('data-theme', 'dark');
   let chatMensagens = [];
   let iaCarregando = false;
 
@@ -181,6 +335,7 @@
   ];
 
   let estado = carregar();
+  let orcamentos = carregarOrcamentos();
   let telaAtual = 'home';
   let obraAtualId = null;
   let abaAtual = 'resumo';
@@ -278,6 +433,10 @@
       if (rInput && !rInput.value) rInput.value = hojeISO();
     } else if (telaAtual === 'backup') {
       root.innerHTML = renderBackup();
+    } else if (telaAtual === 'painel') {
+      root.innerHTML = renderPainel();
+    } else if (telaAtual === 'calculadora') {
+      root.innerHTML = renderCalculadora();
     }
   }
 
@@ -297,7 +456,9 @@
     html += '<div class="header-tag">AS CONSTRUCTION</div>';
     html += '<div class="header-title">Controle de Obras</div>';
     html += '<div class="header-sub">' + estado.obras.length + ' obra(s) cadastrada(s)</div>';
-    html += '</div></div>';
+    html += '</div>';
+    html += '<button class="btn-theme" onclick="toggleTema()" title="Alternar tema">' + (temaEscuro ? '☀' : '◑') + '</button>';
+    html += '</div>';
 
     if (estado.obras.length > 0) {
       html += '<div class="card resultado">';
@@ -310,13 +471,17 @@
       html += '</div></div>';
     }
 
+    html += '<div class="home-actions">';
     html += '<button class="btn-primary" onclick="abrirModalNovaObra()">+ Adicionar Nova Obra</button>';
-    html += '<button class="btn-secondary" onclick="abrirBackup()">Backup / Restaurar Dados</button>';
+    html += '<button class="btn-secondary" onclick="abrirPainel()">Painel Comparativo</button>';
+    html += '<button class="btn-secondary" onclick="abrirBackup()">Backup / Restaurar</button>';
+    html += '<button class="btn-secondary" onclick="abrirCalculadora()">Calculadora</button>';
+    html += '</div>';
 
     if (estado.obras.length === 0) {
       html += '<div class="card" style="margin-top: 16px;"><div class="empty">Nenhuma obra cadastrada ainda.<br>Clique em "Adicionar Nova Obra" para começar.</div></div>';
     } else {
-      html += '<div style="margin-top: 18px;">';
+      html += '<div class="obras-grid">';
       estado.obras.forEach(o => {
         const c = calcularObra(o);
         const status = getStatusInfo(o.status);
@@ -338,7 +503,14 @@
         html += '<div class="obra-stats">';
         html += '<div><div class="obra-stat-label">CONTRATO</div><div class="obra-stat-val" style="color: #73018C">' + brl(o.contrato || 0) + '</div></div>';
         html += '<div><div class="obra-stat-label">LUCRO PROJETADO</div><div class="obra-stat-val" style="color:' + (c.lucro >= 0 ? '#27AE60' : '#C0392B') + '">' + brl(c.lucro) + '</div></div>';
-        html += '</div></div>';
+        html += '</div>';
+        const alertas = gerarAlertas(o, c);
+        if (alertas.length > 0) {
+          html += '<div class="obra-alerts">';
+          alertas.forEach(a => { html += '<span class="alerta ' + a.tipo + '">' + a.texto + '</span>'; });
+          html += '</div>';
+        }
+        html += '</div>';
       });
       html += '</div>';
     }
@@ -351,10 +523,13 @@
     let html = '<div class="header">';
     html += '<div class="header-left">';
     html += '<div class="header-tag">' + (obra.cliente ? escapeHtml(obra.cliente).toUpperCase() : 'AS CONSTRUCTION') + '</div>';
-    html += '<div class="header-title">' + escapeHtml(obra.nome) + '</div>';
+    html += '<div class="header-title obra-title">' + escapeHtml(obra.nome) + '</div>';
     html += '<div class="header-sub">Contrato: ' + brl(obra.contrato || 0) + ' | ' + status.nome + '</div>';
     html += '</div>';
+    html += '<div style="display:flex;gap:8px;align-items:center;flex-shrink:0;">';
+    html += '<button class="btn-theme" onclick="toggleTema()" title="Alternar tema">' + (temaEscuro ? '☀' : '◑') + '</button>';
     html += '<button class="btn-back" onclick="voltarHome()">← Voltar</button>';
+    html += '</div>';
     html += '</div>';
 
     html += '<div class="tabs">';
@@ -376,6 +551,7 @@
     });
     html += '</div>';
 
+    html += '<div class="aba-content">';
     if (abaAtual === 'resumo') html += renderAbaResumo(obra, c);
     else if (abaAtual === 'diarias') html += renderAbaDiarias(obra, c);
     else if (abaAtual === 'avulsos') html += renderAbaAvulsos(obra, c);
@@ -387,12 +563,15 @@
     else if (abaAtual === 'notas') html += renderAbaNotas(obra);
     else if (abaAtual === 'editar') html += renderAbaEditar(obra);
     else if (abaAtual === 'ia') html += renderAbaIA(obra, c);
+    html += '</div>';
 
     return html;
   }
 
   function renderAbaResumo(o, c) {
-    let html = '<div class="card"><div class="card-title">CONTRATO</div>';
+    let html = '<div class="resumo-cols">';
+
+    html += '<div class="card"><div class="card-title">CONTRATO</div>';
     html += '<div class="grid-2">';
     html += '<div><div class="info-label">Valor Total</div><div class="info-value">' + brl(o.contrato || 0) + '</div></div>';
     html += '<div><div class="info-label">Já Recebido</div><div class="info-value green">' + brl(c.totalRecebido) + '</div></div>';
@@ -417,11 +596,13 @@
     html += '<div class="lucro-valor ' + (c.lucro >= 0 ? 'positive' : 'negative') + '">' + brl(c.lucro) + '</div></div>';
     html += '<div class="margem">Margem: ' + c.margem.toFixed(1) + '%</div></div></div>';
 
+    html += '</div>';
     return html;
   }
 
   function renderAbaDiarias(o, c) {
-    let html = '<div class="card"><div class="card-title">LANÇAR DIÁRIA</div>';
+    let html = '<div class="two-col-layout"><div>';
+    html += '<div class="card"><div class="card-title">LANÇAR DIÁRIA</div>';
     html += '<label class="field-label">Data</label><input type="date" id="diaria-data">';
     html += '<label class="field-label" style="margin-top: 14px;">Selecione quem trabalhou:</label>';
 
@@ -449,6 +630,7 @@
       html += '<button class="btn-primary" onclick="lancarDiaria()">Lançar Diária</button>';
     }
     html += '</div>';
+    html += '</div><div>';
 
     html += '<div class="card"><div class="card-title">ÚLTIMOS LANÇAMENTOS (' + (o.diarias || []).length + ')</div>';
     if (!o.diarias || o.diarias.length === 0) {
@@ -466,11 +648,13 @@
     }
     html += '<div class="divider"><div class="linha bold"><div class="linha-label">TOTAL</div><div class="linha-valor">' + brl(c.totalDiarias) + '</div></div></div>';
     html += '</div>';
+    html += '</div></div>';
     return html;
   }
 
   function renderAbaAvulsos(o, c) {
-    let html = '<div class="card"><div class="card-title">LANÇAR GASTO AVULSO</div>';
+    let html = '<div class="two-col-layout"><div>';
+    html += '<div class="card"><div class="card-title">LANÇAR GASTO AVULSO</div>';
     html += '<label class="field-label">Data</label><input type="date" id="avulso-data">';
     html += '<label class="field-label">Categoria</label><select id="avulso-categoria">';
     CATEGORIAS_AVULSAS.forEach(cat => {
@@ -480,6 +664,7 @@
     html += '<label class="field-label">Descrição (opcional)</label><input type="text" id="avulso-desc" placeholder="Ex.: Almoço da equipe">';
     html += '<label class="field-label">Valor (R$)</label><input type="text" inputmode="decimal" id="avulso-valor" placeholder="Ex.: 50,00">';
     html += '<button class="btn-primary" onclick="lancarAvulso()">Lançar Gasto</button></div>';
+    html += '</div><div>';
 
     // Resumo por categoria
     if (o.gastosAvulsos && o.gastosAvulsos.length > 0) {
@@ -511,17 +696,20 @@
       });
     }
     html += '</div>';
+    html += '</div></div>';
     return html;
   }
 
   function renderAbaEmpreitada(o, c) {
-    let html = '<div class="card"><div class="card-title">NOVA EMPREITADA</div>';
+    let html = '<div class="two-col-layout"><div>';
+    html += '<div class="card"><div class="card-title">NOVA EMPREITADA</div>';
     html += '<div class="empreitada-form">';
     html += '<label class="field-label">Nome / Descrição</label><input type="text" id="emp-nome" placeholder="Ex.: Alessandro - rejunte piscinas">';
     html += '<label class="field-label">Valor (R$)</label><input type="text" inputmode="decimal" id="emp-valor" placeholder="Ex.: 13000,00">';
     html += '<label class="field-label">Bônus por entrega no prazo (R$) — opcional</label><input type="text" inputmode="decimal" id="emp-bonus" placeholder="Ex.: 1000,00">';
     html += '<button class="btn-primary" onclick="adicionarEmpreitada()">Adicionar Empreitada</button>';
     html += '</div></div>';
+    html += '</div><div>';
 
     html += '<div class="card"><div class="card-title">EMPREITADAS (' + (o.empreitadas || []).length + ')</div>';
     if (!o.empreitadas || o.empreitadas.length === 0) {
@@ -547,15 +735,18 @@
     }
     html += '<div class="divider"><div class="linha bold"><div class="linha-label">TOTAL PAGO</div><div class="linha-valor">' + brl(c.totalEmp) + '</div></div></div>';
     html += '</div>';
+    html += '</div></div>';
     return html;
   }
 
   function renderAbaRecebimentos(o, c) {
-    let html = '<div class="card"><div class="card-title">REGISTRAR RECEBIMENTO</div>';
+    let html = '<div class="two-col-layout"><div>';
+    html += '<div class="card"><div class="card-title">REGISTRAR RECEBIMENTO</div>';
     html += '<label class="field-label">Data</label><input type="date" id="receb-data">';
     html += '<label class="field-label">Descrição</label><input type="text" id="receb-desc" placeholder="Ex.: Entrada 20% | 1ª parcela | Final">';
     html += '<label class="field-label">Valor (R$)</label><input type="text" inputmode="decimal" id="receb-valor" placeholder="Ex.: 19200,00">';
     html += '<button class="btn-primary" onclick="lancarRecebimento()">Registrar</button></div>';
+    html += '</div><div>';
 
     html += '<div class="card"><div class="card-title">RESUMO FINANCEIRO</div>';
     html += '<div class="linha"><div class="linha-label">Valor do Contrato</div><div class="linha-valor">' + brl(o.contrato || 0) + '</div></div>';
@@ -577,6 +768,7 @@
       });
     }
     html += '</div>';
+    html += '</div></div>';
     return html;
   }
 
@@ -594,7 +786,11 @@
     });
     hist.sort((a,b) => b.data.localeCompare(a.data));
 
-    let html = '<div class="card"><div class="card-title">HISTÓRICO COMPLETO (' + hist.length + ')</div>';
+    let html = '<div class="card">';
+    html += '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;">';
+    html += '<div style="font-size:10px;color:var(--ink-3);letter-spacing:2px;font-weight:700;text-transform:uppercase;">HISTÓRICO COMPLETO (' + hist.length + ')</div>';
+    html += '<button class="btn-mini" onclick="exportarCSV()">Exportar CSV</button>';
+    html += '</div>';
     if (hist.length === 0) {
       html += '<div class="empty">Sem lançamentos.</div>';
     } else {
@@ -674,7 +870,8 @@
   }
 
   function renderAbaEquipe(o) {
-    let html = '<div class="card"><div class="card-title">EQUIPE CADASTRADA</div>';
+    let html = '<div class="two-col-layout"><div>';
+    html += '<div class="card"><div class="card-title">EQUIPE CADASTRADA</div>';
     if (!o.trabalhadores || o.trabalhadores.length === 0) {
       html += '<div class="empty">Nenhum trabalhador cadastrado.</div>';
     } else {
@@ -686,6 +883,7 @@
       });
     }
     html += '</div>';
+    html += '</div><div>';
 
     html += '<div class="card"><div class="card-title">ADICIONAR TRABALHADOR</div>';
     html += '<label class="field-label">Nome</label><input type="text" id="novo-trab-nome" placeholder="Ex.: Jorge">';
@@ -698,6 +896,7 @@
     html += '<input type="text" inputmode="decimal" id="valor-marmita" value="' + (o.valorMarmita || 30) + '">';
     html += '<button class="btn-primary" onclick="salvarMarmita()">Salvar</button>';
     html += '</div>';
+    html += '</div></div>';
     return html;
   }
 
@@ -727,7 +926,8 @@
     html += '<label class="field-label">Previsão de término</label><input type="date" id="ed-previsao" value="' + (o.dataPrevisao || '') + '">';
 
     html += '<button class="btn-primary" onclick="salvarEdicaoObra()">Salvar Alterações</button>';
-    html += '<button class="btn-danger" onclick="excluirObra()" style="margin-top: 16px;">Excluir esta obra</button>';
+    html += '<button class="btn-secondary" onclick="duplicarObra()" style="margin-top:8px;">Duplicar esta obra</button>';
+    html += '<button class="btn-danger" onclick="excluirObra()" style="margin-top:8px;">Excluir esta obra</button>';
     html += '</div>';
     return html;
   }
@@ -1143,6 +1343,19 @@
 
     if (obra.nota) ctx += '\nANOTAÇÕES: ' + obra.nota.substring(0, 500) + '\n';
 
+    const orcs = carregarOrcamentos();
+    if (orcs.length > 0) {
+      ctx += '\nORÇAMENTOS SALVOS (' + orcs.length + '):\n';
+      orcs.forEach(orc => {
+        ctx += '- "' + orc.nome + '"' + (orc.cliente ? ' (' + orc.cliente + ')' : '');
+        ctx += ': custo previsto ' + brl(orc.custoTotal);
+        ctx += ', preço sugerido ' + brl(orc.precoVenda);
+        ctx += ', margem ' + orc.margem.toFixed(1) + '%';
+        const saude = orc.margem >= 20 ? 'Saudável' : orc.margem >= 10 ? 'Apertada' : orc.margem >= 0 ? 'Crítica' : 'Prejuízo';
+        ctx += ' (' + saude + ')\n';
+      });
+    }
+
     return ctx;
   }
 
@@ -1242,27 +1455,11 @@
     try {
       const calc = calcularObra(obra);
       const system = gerarContextoObra(obra, calc);
-      const resp = await fetch('https://api.anthropic.com/v1/messages', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-api-key': apiKey,
-          'anthropic-version': '2023-06-01',
-          'anthropic-dangerous-direct-browser-calls': 'true'
-        },
-        body: JSON.stringify({
-          model: 'claude-sonnet-4-20250514',
-          max_tokens: 1024,
-          system: system,
-          messages: chatMensagens
-        })
-      });
-      if (!resp.ok) {
-        const err = await resp.json().catch(() => ({}));
-        throw new Error(err.error && err.error.message ? err.error.message : 'Erro HTTP ' + resp.status);
+      if (!window._anthropicSend) {
+        throw new Error('SDK ainda carregando — aguarde um instante e tente novamente.');
       }
-      const data = await resp.json();
-      chatMensagens.push({ role: 'assistant', content: data.content[0].text });
+      const text = await window._anthropicSend(apiKey, system, chatMensagens);
+      chatMensagens.push({ role: 'assistant', content: text });
     } catch (e) {
       chatMensagens.push({ role: 'assistant', content: '⚠️ Erro ao consultar a IA: ' + e.message });
     }
@@ -1270,6 +1467,475 @@
     iaCarregando = false;
     render();
     setTimeout(() => { const el = document.getElementById('chat-msgs'); if (el) el.scrollTop = el.scrollHeight; }, 50);
+  }
+
+  // ============ TEMA ============
+  function toggleTema() {
+    temaEscuro = !temaEscuro;
+    if (temaEscuro) {
+      document.documentElement.setAttribute('data-theme', 'dark');
+    } else {
+      document.documentElement.removeAttribute('data-theme');
+    }
+    localStorage.setItem(KEY_THEME, temaEscuro ? 'dark' : 'light');
+    document.querySelectorAll('.btn-theme').forEach(btn => {
+      btn.textContent = temaEscuro ? '☀' : '◑';
+    });
+  }
+
+  // ============ ALERTAS ============
+  function gerarAlertas(obra, c) {
+    const alertas = [];
+    if (obra.status === 'concluida') return alertas;
+    if (obra.contrato > 0 && c.margem < 10) {
+      alertas.push({ texto: 'Margem baixa', tipo: 'red' });
+    }
+    if (obra.contrato > 0 && c.custoTotal > obra.contrato * 0.8) {
+      alertas.push({ texto: 'Custos altos', tipo: 'amber' });
+    }
+    if (obra.dataPrevisao && obra.status === 'andamento') {
+      const hoje = new Date();
+      const prazo = new Date(obra.dataPrevisao + 'T12:00:00');
+      const dias = Math.round((prazo - hoje) / (1000 * 60 * 60 * 24));
+      if (dias < 0) {
+        alertas.push({ texto: 'Prazo vencido', tipo: 'red' });
+      } else if (dias <= 15) {
+        alertas.push({ texto: 'Prazo em ' + dias + 'd', tipo: 'amber' });
+      }
+    }
+    if (obra.contrato > 0 && c.totalRecebido > 0 && c.saldoReceber > obra.contrato * 0.5) {
+      alertas.push({ texto: 'A receber pendente', tipo: 'amber' });
+    }
+    return alertas;
+  }
+
+  // ============ DUPLICAR OBRA ============
+  function duplicarObra() {
+    const obra = getObra(obraAtualId);
+    if (!obra) return;
+    if (!confirm('Duplicar esta obra?\nEquipe e configurações serão copiadas. Lançamentos (diárias, gastos, empreitadas, recebimentos) não serão copiados.')) return;
+    const nova = {
+      id: 'obra_' + Date.now(),
+      nome: obra.nome + ' (cópia)',
+      cliente: obra.cliente,
+      contrato: obra.contrato,
+      impostoPct: obra.impostoPct,
+      dataInicio: '',
+      dataPrevisao: '',
+      status: 'andamento',
+      valorMarmita: obra.valorMarmita || 30,
+      nota: '',
+      diarias: [],
+      gastosAvulsos: [],
+      empreitadas: [],
+      trabalhadores: JSON.parse(JSON.stringify(obra.trabalhadores || [])),
+      recebimentos: [],
+      criadaEm: new Date().toISOString()
+    };
+    estado.obras.push(nova);
+    salvar();
+    abrirObra(nova.id);
+  }
+
+  // ============ EXPORT CSV ============
+  function exportarCSV() {
+    const obra = getObra(obraAtualId);
+    if (!obra) return;
+    const linhas = [['Data', 'Tipo', 'Descrição', 'Valor (R$)']];
+    (obra.diarias || []).sort((a,b) => a.data.localeCompare(b.data)).forEach(d => {
+      const periodoTxt = d.periodo === 'meio' ? ' (meio período)' : '';
+      linhas.push([d.data, 'Diária', d.trabNome + (d.marmita ? ' + marmita' : '') + periodoTxt, d.valor]);
+    });
+    (obra.gastosAvulsos || []).sort((a,b) => a.data.localeCompare(b.data)).forEach(g => {
+      linhas.push([g.data, getCategoriaNome(g.categoria), g.descricao || 'Gasto avulso', g.valor]);
+    });
+    (obra.empreitadas || []).forEach(e => {
+      if (e.pago) linhas.push(['-', 'Empreitada', e.nome, e.valor]);
+      if (e.bonusPago) linhas.push(['-', 'Bônus empreitada', e.nome, e.bonus]);
+    });
+    (obra.recebimentos || []).sort((a,b) => a.data.localeCompare(b.data)).forEach(r => {
+      linhas.push([r.data, 'Recebimento', r.descricao || 'Recebimento', r.valor]);
+    });
+    const csv = linhas.map(l => l.map(v => '"' + String(v).replace(/"/g, '""') + '"').join(',')).join('\r\n');
+    const blob = new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = obra.nome.replace(/[^a-zA-Z0-9À-ɏ]/g, '_') + '_historico.csv';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  }
+
+  // ============ PAINEL COMPARATIVO ============
+  function abrirPainel() {
+    telaAtual = 'painel';
+    render();
+    window.scrollTo(0, 0);
+  }
+
+  function renderPainel() {
+    let html = '<div class="header">';
+    html += '<div class="header-left">';
+    html += '<div class="header-tag">AS CONSTRUCTION</div>';
+    html += '<div class="header-title obra-title">Painel Comparativo</div>';
+    html += '</div>';
+    html += '<div style="display:flex;gap:8px;align-items:center;flex-shrink:0;">';
+    html += '<button class="btn-theme" onclick="toggleTema()" title="Alternar tema">' + (temaEscuro ? '☀' : '◑') + '</button>';
+    html += '<button class="btn-back" onclick="voltarHome()">← Voltar</button>';
+    html += '</div></div>';
+
+    if (estado.obras.length === 0) {
+      html += '<div class="card"><div class="empty">Nenhuma obra cadastrada.</div></div>';
+      return html;
+    }
+
+    let totalContrato = 0, totalLucro = 0, totalRecebido = 0;
+    const obrasCalc = estado.obras.map(o => {
+      const c = calcularObra(o);
+      totalContrato += Number(o.contrato || 0);
+      totalLucro += c.lucro;
+      totalRecebido += c.totalRecebido;
+      return { o, c };
+    }).sort((a, b) => a.c.margem - b.c.margem);
+
+    html += '<div class="resumo-cols">';
+    html += '<div class="card"><div class="card-title">RECEITA TOTAL</div><div class="info-value">' + brl(totalContrato) + '</div></div>';
+    html += '<div class="card"><div class="card-title">LUCRO PROJETADO</div><div class="info-value ' + (totalLucro >= 0 ? 'green' : 'red') + '">' + brl(totalLucro) + '</div></div>';
+    html += '<div class="card"><div class="card-title">TOTAL RECEBIDO</div><div class="info-value green">' + brl(totalRecebido) + '</div></div>';
+    html += '</div>';
+
+    html += '<div class="card"><div class="card-title">OBRAS — MENOR MARGEM PRIMEIRO</div>';
+    html += '<div style="overflow-x:auto;">';
+    html += '<table class="painel-table"><thead><tr>';
+    html += '<th>Obra</th>';
+    html += '<th class="painel-col-hide">Contrato</th>';
+    html += '<th class="painel-col-hide">Custo</th>';
+    html += '<th>Lucro</th>';
+    html += '<th>Margem</th>';
+    html += '<th class="painel-col-hide">Recebido</th>';
+    html += '<th>Status</th>';
+    html += '</tr></thead><tbody>';
+
+    obrasCalc.forEach(({ o, c }) => {
+      const status = getStatusInfo(o.status);
+      const margemColor = c.margem < 0 ? 'var(--red)' : c.margem < 10 ? 'var(--amber)' : 'var(--green)';
+      const barWidth = Math.max(2, Math.min(80, (Math.abs(c.margem) / 50) * 80));
+      let prazoBadge = '';
+      if (o.dataPrevisao && o.status === 'andamento') {
+        const dias = Math.round((new Date(o.dataPrevisao + 'T12:00:00') - new Date()) / 86400000);
+        if (dias < 0) prazoBadge = ' <span class="badge red">Vencida</span>';
+        else if (dias <= 15) prazoBadge = ' <span class="badge orange">+' + dias + 'd</span>';
+      }
+      html += '<tr onclick="abrirObra(\'' + o.id + '\')">';
+      html += '<td><div class="painel-obra-nome">' + escapeHtml(o.nome) + '</div>';
+      if (o.cliente) html += '<div class="painel-obra-cliente">' + escapeHtml(o.cliente) + '</div>';
+      html += '</td>';
+      html += '<td class="painel-col-hide" style="font-size:14px;font-weight:600;color:var(--ink)">' + brl(o.contrato || 0) + '</td>';
+      html += '<td class="painel-col-hide" style="font-size:14px;color:var(--ink-2)">' + brl(c.custoTotal) + '</td>';
+      html += '<td style="font-size:14px;font-weight:700;color:' + (c.lucro >= 0 ? 'var(--green)' : 'var(--red)') + '">' + brl(c.lucro) + '</td>';
+      html += '<td><div class="margem-bar-wrap"><div class="margem-bar" style="width:' + barWidth + 'px;background:' + margemColor + '"></div><span style="font-size:13px;font-weight:700;color:' + margemColor + '">' + c.margem.toFixed(1) + '%</span></div></td>';
+      html += '<td class="painel-col-hide" style="font-size:13px;color:var(--green)">' + brl(c.totalRecebido) + '</td>';
+      html += '<td><span class="badge ' + status.cor + '">' + status.nome + '</span>' + prazoBadge + '</td>';
+      html += '</tr>';
+    });
+
+    html += '</tbody></table></div></div>';
+    return html;
+  }
+
+  // ============ CALCULADORA ============
+  function carregarOrcamentos() {
+    try {
+      const raw = localStorage.getItem(KEY_ORC);
+      if (raw) return JSON.parse(raw);
+    } catch(e) {}
+    return [];
+  }
+
+  function salvarOrcamentos() {
+    try {
+      localStorage.setItem(KEY_ORC, JSON.stringify(orcamentos));
+    } catch(e) {
+      alert('Erro ao salvar orçamento: ' + e.message);
+    }
+  }
+
+  function abrirCalculadora() {
+    telaAtual = 'calculadora';
+    render();
+  }
+
+  function calcOrcDados() {
+    const trabalhadores = parseFloat(document.getElementById('orc-trab')?.value) || 0;
+    const dias = parseFloat(document.getElementById('orc-dias')?.value) || 0;
+    const valorDia = parseNum(document.getElementById('orc-valordia')?.value || '0');
+    const totalDiarias = trabalhadores * dias * valorDia;
+    const totalEmpreitadas = parseNum(document.getElementById('orc-empreitadas')?.value || '0');
+    const totalMaterial = parseNum(document.getElementById('orc-material')?.value || '0');
+    const totalAvulsos = parseNum(document.getElementById('orc-avulsos')?.value || '0');
+    const custoTotal = totalDiarias + totalEmpreitadas + totalMaterial + totalAvulsos;
+    const impostoPct = parseFloat(document.getElementById('orc-imposto')?.value) || 0;
+    const modo = document.querySelector('.orc-modo-pill.active')?.dataset.modo || 'A';
+    const margemDesejada = parseFloat(document.getElementById('orc-margem')?.value) || 0;
+    const budgetCliente = parseNum(document.getElementById('orc-budget')?.value || '0');
+
+    let precoVenda = 0, imposto = 0, lucro = 0, margem = 0;
+    if (modo === 'A') {
+      const divisor = 1 - impostoPct / 100 - margemDesejada / 100;
+      precoVenda = divisor > 0 ? custoTotal / divisor : 0;
+      imposto = precoVenda * impostoPct / 100;
+      lucro = precoVenda - custoTotal - imposto;
+      margem = margemDesejada;
+    } else {
+      precoVenda = budgetCliente;
+      imposto = budgetCliente * impostoPct / 100;
+      lucro = budgetCliente - custoTotal - imposto;
+      margem = budgetCliente > 0 ? (lucro / budgetCliente) * 100 : 0;
+    }
+    return { trabalhadores, dias, valorDia, totalDiarias, totalEmpreitadas, totalMaterial, totalAvulsos, custoTotal, impostoPct, modo, margemDesejada, budgetCliente, precoVenda, imposto, lucro, margem };
+  }
+
+  function saudeInfo(margem) {
+    if (margem >= 20) return { classe: 'verde', label: 'Saudável' };
+    if (margem >= 10) return { classe: 'amber', label: 'Apertada' };
+    if (margem >= 0)  return { classe: 'critica', label: 'Crítica' };
+    return { classe: 'prejuizo', label: 'Prejuízo' };
+  }
+
+  function calcularOrcamentoLive() {
+    const el = document.getElementById('orc-resultado');
+    if (!el) return;
+    const d = calcOrcDados();
+    const saude = saudeInfo(d.margem);
+
+    const diariasLine = '<div class="linha"><div class="linha-label">Diárias (' + d.trabalhadores + ' × ' + d.dias + ' dias × ' + brl(d.valorDia) + ')</div><div class="linha-valor">' + brl(d.totalDiarias) + '</div></div>';
+    const empLine = '<div class="linha"><div class="linha-label">Empreitadas previstas</div><div class="linha-valor">' + brl(d.totalEmpreitadas) + '</div></div>';
+    const matLine = '<div class="linha"><div class="linha-label">Material previsto</div><div class="linha-valor">' + brl(d.totalMaterial) + '</div></div>';
+    const avulsosLine = '<div class="linha"><div class="linha-label">Gastos avulsos previstos</div><div class="linha-valor">' + brl(d.totalAvulsos) + '</div></div>';
+    const custoLine = '<div class="linha bold divider"><div class="linha-label">Custo total previsto</div><div class="linha-valor">' + brl(d.custoTotal) + '</div></div>';
+    const impostoLine = '<div class="linha"><div class="linha-label">Imposto (' + d.impostoPct + '%)</div><div class="linha-valor">' + brl(d.imposto) + '</div></div>';
+
+    let precoLine = '';
+    if (d.modo === 'A') {
+      precoLine = '<div class="linha bold divider-purple"><div class="linha-label" style="color:var(--purple); font-weight:700;">PREÇO DE VENDA SUGERIDO</div><div class="linha-valor" style="font-size:18px; color:var(--purple);">' + brl(d.precoVenda) + '</div></div>';
+    } else {
+      precoLine = '<div class="linha bold divider-purple"><div class="linha-label" style="color:var(--purple); font-weight:700;">BUDGET DO CLIENTE</div><div class="linha-valor" style="font-size:18px; color:var(--purple);">' + brl(d.precoVenda) + '</div></div>';
+    }
+
+    const lucroColor = d.lucro >= 0 ? 'var(--green)' : 'var(--red)';
+    const lucroLine = '<div class="linha" style="margin-top:8px;"><div class="linha-label">Lucro líquido</div><div class="linha-valor" style="font-size:17px; font-weight:800; color:' + lucroColor + ';">' + brl(d.lucro) + '</div></div>';
+    const margemLine = '<div class="linha"><div class="linha-label">Margem</div><div class="linha-valor">' + d.margem.toFixed(1) + '%</div></div>';
+    const saudeLine = '<span class="orc-saude ' + saude.classe + '">' + saude.label + '</span>';
+
+    el.innerHTML = diariasLine + empLine + matLine + avulsosLine + custoLine + impostoLine + precoLine + lucroLine + margemLine + saudeLine;
+
+    const diariaTotal = document.getElementById('orc-diaria-total');
+    if (diariaTotal) diariaTotal.textContent = '= ' + brl(d.totalDiarias);
+  }
+
+  function trocarModoOrc(modo) {
+    document.querySelectorAll('.orc-modo-pill').forEach(p => {
+      p.classList.toggle('active', p.dataset.modo === modo);
+    });
+    const campoA = document.getElementById('orc-campo-A');
+    const campoB = document.getElementById('orc-campo-B');
+    if (campoA) campoA.style.display = modo === 'A' ? 'block' : 'none';
+    if (campoB) campoB.style.display = modo === 'B' ? 'block' : 'none';
+    calcularOrcamentoLive();
+  }
+
+  function salvarOrcamento() {
+    const nome = document.getElementById('orc-nome')?.value?.trim() || '';
+    if (!nome) { alert('Informe o nome do orçamento.'); return; }
+    const d = calcOrcDados();
+    if (d.custoTotal <= 0) { alert('Informe pelo menos um custo para calcular.'); return; }
+    const orc = {
+      id: 'orc_' + Date.now(),
+      nome,
+      cliente: document.getElementById('orc-cliente')?.value?.trim() || '',
+      impostoPct: d.impostoPct,
+      trabalhadores: d.trabalhadores,
+      dias: d.dias,
+      valorDia: d.valorDia,
+      totalEmpreitadas: d.totalEmpreitadas,
+      totalMaterial: d.totalMaterial,
+      totalAvulsos: d.totalAvulsos,
+      modo: d.modo,
+      margemDesejada: d.margemDesejada,
+      budgetCliente: d.budgetCliente,
+      custoTotal: d.custoTotal,
+      precoVenda: d.precoVenda,
+      lucro: d.lucro,
+      margem: d.margem,
+      criadaEm: new Date().toISOString()
+    };
+    orcamentos.push(orc);
+    salvarOrcamentos();
+    render();
+  }
+
+  function excluirOrcamento(id) {
+    if (!confirm('Excluir este orçamento?')) return;
+    orcamentos = orcamentos.filter(o => o.id !== id);
+    salvarOrcamentos();
+    render();
+  }
+
+  function transformarEmObra(id) {
+    const orc = orcamentos.find(o => o.id === id);
+    if (!orc) return;
+    if (!confirm('Transformar "' + orc.nome + '" em obra?\n\nO orçamento será removido da lista e uma nova obra será criada com o preço sugerido como contrato.')) return;
+    const novaObra = {
+      id: 'obra_' + Date.now(),
+      nome: orc.nome,
+      cliente: orc.cliente,
+      contrato: orc.precoVenda,
+      impostoPct: orc.impostoPct,
+      dataInicio: hojeISO(),
+      dataPrevisao: '',
+      status: 'andamento',
+      valorMarmita: 30,
+      nota: 'Criada a partir do orçamento salvo em ' + dateBR(orc.criadaEm.split('T')[0]),
+      diarias: [],
+      gastosAvulsos: [],
+      empreitadas: [],
+      trabalhadores: [],
+      recebimentos: [],
+      criadaEm: new Date().toISOString()
+    };
+    estado.obras.push(novaObra);
+    salvar();
+    orcamentos = orcamentos.filter(o => o.id !== id);
+    salvarOrcamentos();
+    abrirObra(novaObra.id);
+  }
+
+  function verDetalhesOrcamento(id) {
+    const orc = orcamentos.find(o => o.id === id);
+    if (!orc) return;
+    const saude = saudeInfo(orc.margem);
+    let html = '<div class="modal-title">' + escapeHtml(orc.nome) + '</div>';
+    if (orc.cliente) html += '<div style="font-size:13px; color:var(--ink-3); margin-bottom:16px;">Cliente: ' + escapeHtml(orc.cliente) + '</div>';
+    html += '<div class="card-title" style="margin-bottom:12px;">BREAKDOWN DE CUSTOS</div>';
+    const totalDiarias = orc.trabalhadores * orc.dias * orc.valorDia;
+    html += '<div class="linha"><div class="linha-label">Diárias (' + orc.trabalhadores + ' × ' + orc.dias + ' dias × ' + brl(orc.valorDia) + ')</div><div class="linha-valor">' + brl(totalDiarias) + '</div></div>';
+    html += '<div class="linha"><div class="linha-label">Empreitadas previstas</div><div class="linha-valor">' + brl(orc.totalEmpreitadas) + '</div></div>';
+    html += '<div class="linha"><div class="linha-label">Material previsto</div><div class="linha-valor">' + brl(orc.totalMaterial) + '</div></div>';
+    html += '<div class="linha"><div class="linha-label">Gastos avulsos</div><div class="linha-valor">' + brl(orc.totalAvulsos) + '</div></div>';
+    html += '<div class="linha bold divider"><div class="linha-label">Custo total</div><div class="linha-valor">' + brl(orc.custoTotal) + '</div></div>';
+    html += '<div class="linha"><div class="linha-label">Imposto (' + orc.impostoPct + '%)</div><div class="linha-valor">' + brl(orc.precoVenda * orc.impostoPct / 100) + '</div></div>';
+    html += '<div class="linha bold divider-purple"><div class="linha-label" style="color:var(--purple);">' + (orc.modo === 'A' ? 'PREÇO DE VENDA SUGERIDO' : 'BUDGET DO CLIENTE') + '</div><div class="linha-valor" style="color:var(--purple); font-size:17px;">' + brl(orc.precoVenda) + '</div></div>';
+    const lucroColor = orc.lucro >= 0 ? 'var(--green)' : 'var(--red)';
+    html += '<div class="linha"><div class="linha-label">Lucro líquido</div><div class="linha-valor" style="color:' + lucroColor + ';">' + brl(orc.lucro) + '</div></div>';
+    html += '<div class="linha"><div class="linha-label">Margem</div><div class="linha-valor">' + orc.margem.toFixed(1) + '%</div></div>';
+    html += '<span class="orc-saude ' + saude.classe + '">' + saude.label + '</span>';
+    html += '<div style="font-size:11px; color:var(--ink-4); margin-top:12px;">Salvo em ' + dateBR(orc.criadaEm.split('T')[0]) + '</div>';
+    html += '<div class="modal-actions"><button class="btn-cancel" onclick="fecharModal()">Fechar</button></div>';
+    document.getElementById('modal-content').innerHTML = html;
+    document.getElementById('modal-bg').classList.add('show');
+  }
+
+  function renderCalculadora() {
+    let html = '<div class="header">';
+    html += '<div class="header-left">';
+    html += '<div class="header-tag">AS CONSTRUCTION</div>';
+    html += '<div class="header-title obra-title">Calculadora de Orçamento</div>';
+    html += '</div>';
+    html += '<button class="btn-theme" onclick="toggleTema()" title="Alternar tema">' + (temaEscuro ? '☀' : '◑') + '</button>';
+    html += '<button class="btn-back" onclick="voltarHome()">← Voltar</button>';
+    html += '</div>';
+
+    html += '<div class="two-col-layout">';
+
+    // Coluna esquerda: formulário
+    html += '<div>';
+    html += '<div class="card">';
+    html += '<div class="card-title">NOVO ORÇAMENTO</div>';
+
+    html += '<label class="field-label">Nome do orçamento</label>';
+    html += '<input type="text" id="orc-nome" placeholder="Ex: Reforma banheiro" oninput="calcularOrcamentoLive()">';
+    html += '<label class="field-label">Cliente</label>';
+    html += '<input type="text" id="orc-cliente" placeholder="Nome do cliente" oninput="calcularOrcamentoLive()">';
+    html += '<label class="field-label">Imposto (%)</label>';
+    html += '<input type="number" id="orc-imposto" value="13" min="0" max="100" step="0.1" oninput="calcularOrcamentoLive()" style="width:100%; padding:13px 14px; font-size:15px; border:1.5px solid rgba(0,0,0,0.10); border-radius:var(--radius-input); font-family:inherit; background:var(--bg); color:var(--ink);">';
+
+    html += '<div class="card-title" style="margin-top:20px; margin-bottom:12px;">CUSTOS PREVISTOS</div>';
+
+    html += '<label class="field-label">Diárias</label>';
+    html += '<div class="diaria-helper">';
+    html += '<input type="number" id="orc-trab" placeholder="Trabalhadores" min="0" oninput="calcularOrcamentoLive()" style="width:100%; padding:13px 14px; font-size:15px; border:1.5px solid rgba(0,0,0,0.10); border-radius:var(--radius-input); font-family:inherit; background:var(--bg); color:var(--ink);">';
+    html += '<span>×</span>';
+    html += '<input type="number" id="orc-dias" placeholder="Dias" min="0" oninput="calcularOrcamentoLive()" style="width:100%; padding:13px 14px; font-size:15px; border:1.5px solid rgba(0,0,0,0.10); border-radius:var(--radius-input); font-family:inherit; background:var(--bg); color:var(--ink);">';
+    html += '<span>×</span>';
+    html += '<input type="text" id="orc-valordia" placeholder="R$/dia" oninput="calcularOrcamentoLive()" style="width:100%; padding:13px 14px; font-size:15px; border:1.5px solid rgba(0,0,0,0.10); border-radius:var(--radius-input); font-family:inherit; background:var(--bg); color:var(--ink);">';
+    html += '</div>';
+    html += '<div class="diaria-total" id="orc-diaria-total">= R$ 0,00</div>';
+
+    html += '<label class="field-label">Empreitadas previstas (R$)</label>';
+    html += '<input type="text" id="orc-empreitadas" placeholder="0,00" oninput="calcularOrcamentoLive()" style="width:100%; padding:13px 14px; font-size:15px; border:1.5px solid rgba(0,0,0,0.10); border-radius:var(--radius-input); font-family:inherit; background:var(--bg); color:var(--ink);">';
+    html += '<label class="field-label">Material previsto (R$)</label>';
+    html += '<input type="text" id="orc-material" placeholder="0,00" oninput="calcularOrcamentoLive()" style="width:100%; padding:13px 14px; font-size:15px; border:1.5px solid rgba(0,0,0,0.10); border-radius:var(--radius-input); font-family:inherit; background:var(--bg); color:var(--ink);">';
+    html += '<label class="field-label">Gastos avulsos previstos (R$)</label>';
+    html += '<input type="text" id="orc-avulsos" placeholder="0,00" oninput="calcularOrcamentoLive()" style="width:100%; padding:13px 14px; font-size:15px; border:1.5px solid rgba(0,0,0,0.10); border-radius:var(--radius-input); font-family:inherit; background:var(--bg); color:var(--ink);">';
+
+    html += '<div class="card-title" style="margin-top:20px; margin-bottom:4px;">MODO DE CÁLCULO</div>';
+    html += '<div class="orc-modo-pills">';
+    html += '<button class="orc-modo-pill active" data-modo="A" onclick="trocarModoOrc(\'A\')">Modo A: Calcular preço</button>';
+    html += '<button class="orc-modo-pill" data-modo="B" onclick="trocarModoOrc(\'B\')">Modo B: Analisar budget</button>';
+    html += '</div>';
+
+    html += '<div id="orc-campo-A">';
+    html += '<label class="field-label">Margem desejada (%)</label>';
+    html += '<input type="number" id="orc-margem" value="20" min="0" max="99" step="0.5" oninput="calcularOrcamentoLive()" style="width:100%; padding:13px 14px; font-size:15px; border:1.5px solid rgba(0,0,0,0.10); border-radius:var(--radius-input); font-family:inherit; background:var(--bg); color:var(--ink);">';
+    html += '</div>';
+    html += '<div id="orc-campo-B" style="display:none;">';
+    html += '<label class="field-label">Budget do cliente (R$)</label>';
+    html += '<input type="text" id="orc-budget" placeholder="0,00" oninput="calcularOrcamentoLive()" style="width:100%; padding:13px 14px; font-size:15px; border:1.5px solid rgba(0,0,0,0.10); border-radius:var(--radius-input); font-family:inherit; background:var(--bg); color:var(--ink);">';
+    html += '</div>';
+
+    html += '<button class="btn-primary" onclick="salvarOrcamento()">Salvar Orçamento</button>';
+    html += '</div></div>';
+
+    // Coluna direita: resultado + lista
+    html += '<div>';
+
+    // Card resultado ao vivo
+    html += '<div class="card resultado">';
+    html += '<div class="card-title">RESULTADO CALCULADO</div>';
+    html += '<div id="orc-resultado"><div class="empty" style="padding:8px 0;">Preencha os custos ao lado para calcular.</div></div>';
+    html += '</div>';
+
+    // Card orçamentos salvos
+    html += '<div class="card">';
+    html += '<div class="card-title">ORÇAMENTOS SALVOS</div>';
+    if (orcamentos.length === 0) {
+      html += '<div class="empty">Nenhum orçamento salvo ainda.</div>';
+    } else {
+      orcamentos.slice().reverse().forEach(orc => {
+        const saude = saudeInfo(orc.margem);
+        html += '<div class="orc-item">';
+        html += '<div class="orc-item-header">';
+        html += '<div><div class="orc-item-nome">' + escapeHtml(orc.nome) + '</div>';
+        if (orc.cliente) html += '<div class="orc-item-cliente">' + escapeHtml(orc.cliente) + '</div>';
+        html += '<div class="orc-item-preco">' + brl(orc.precoVenda) + '</div></div>';
+        html += '<div style="text-align:right; flex-shrink:0;"><div style="font-size:13px; font-weight:700; color:var(--ink);">' + orc.margem.toFixed(1) + '%</div>';
+        html += '<span class="orc-saude ' + saude.classe + '">' + saude.label + '</span></div>';
+        html += '</div>';
+        html += '<div class="orc-item-actions">';
+        html += '<button class="btn-mini" onclick="verDetalhesOrcamento(\'' + orc.id + '\')">Ver detalhes</button>';
+        html += '<button class="btn-mini" style="color:var(--purple); border-color:rgba(115,1,140,0.25);" onclick="transformarEmObra(\'' + orc.id + '\')">Transformar em Obra</button>';
+        html += '<button class="btn-mini danger" onclick="excluirOrcamento(\'' + orc.id + '\')">Excluir</button>';
+        html += '</div></div>';
+      });
+    }
+    html += '</div>';
+
+    html += '</div>';
+    html += '</div>';
+
+    return html;
   }
 
   // INIT - Pré-cadastra Atmosphera apenas se não houver nenhuma obra
@@ -1311,6 +1977,20 @@
 
   inicializarAtmosphera();
   render();
+</script>
+
+<script type="module">
+  import Anthropic from 'https://esm.sh/@anthropic-ai/sdk';
+  window._anthropicSend = async function(apiKey, system, messages) {
+    const client = new Anthropic({ apiKey, dangerouslyAllowBrowser: true });
+    const msg = await client.messages.create({
+      model: 'claude-sonnet-4-5',
+      max_tokens: 1024,
+      system: system,
+      messages: messages
+    });
+    return msg.content[0].text;
+  };
 </script>
 </body>
 </html>
