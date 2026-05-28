@@ -316,6 +316,22 @@
   .rel-marmita-line { font-size:12px; color:var(--ink-3); margin-top:8px; display:flex; justify-content:space-between; padding:0 2px; }
   [data-theme="dark"] .rel-total-dinheiro { background:rgba(115,1,140,0.12); }
   [data-theme="dark"] .rel-quinzena-pill { background:#1C1C1E; border-color:rgba(255,255,255,0.10); }
+
+  /* Firebase Login */
+  .tela-login { display:flex; flex-direction:column; align-items:center; justify-content:center; min-height:80vh; padding:24px; }
+  .login-card { background:var(--surface); border-radius:20px; padding:40px 32px; max-width:380px; width:100%; text-align:center; box-shadow:var(--shadow-float); }
+  .login-logo { font-size:28px; font-weight:800; color:var(--purple); letter-spacing:-0.5px; margin-bottom:4px; }
+  .login-tag { font-size:10px; font-weight:700; letter-spacing:2px; text-transform:uppercase; color:var(--ink-3); margin-bottom:24px; }
+  .login-sub { font-size:14px; color:var(--ink-3); margin-bottom:32px; line-height:1.6; }
+  .btn-google { display:flex; align-items:center; justify-content:center; gap:10px; width:100%; padding:14px 20px; border-radius:var(--radius-btn); border:1.5px solid rgba(0,0,0,0.12); background:#fff; color:#3c4043; font-size:15px; font-weight:600; cursor:pointer; font-family:inherit; transition:box-shadow 0.2s ease, background 0.15s ease; }
+  .btn-google:hover { background:#f8f8f8; box-shadow:0 2px 8px rgba(0,0,0,0.12); }
+  .btn-google:disabled { opacity:0.6; cursor:default; }
+  .header-user { display:flex; align-items:center; gap:8px; }
+  .header-user-name { font-size:11px; color:rgba(255,255,255,0.70); max-width:100px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .btn-logout { background:none; border:1.5px solid rgba(255,255,255,0.30); cursor:pointer; padding:5px 10px; border-radius:8px; color:rgba(255,255,255,0.80); font-size:11px; font-weight:600; font-family:inherit; transition:all 0.15s; }
+  .btn-logout:hover { background:rgba(255,255,255,0.12); color:#fff; border-color:rgba(255,255,255,0.55); }
+  [data-theme="dark"] .btn-google { background:#1C1C1E; color:#e0e0e0; border-color:rgba(255,255,255,0.12); }
+  [data-theme="dark"] .btn-google:hover { background:#2a2a2e; }
 </style>
 </head>
 <body>
@@ -355,6 +371,7 @@
 
   let estado = carregar();
   let orcamentos = carregarOrcamentos();
+  let usuarioAtual = null;
   let telaAtual = 'home';
   let obraAtualId = null;
   let abaAtual = 'resumo';
@@ -415,6 +432,7 @@
     } catch (e) {
       alert('Erro ao salvar: ' + e.message);
     }
+    salvarNaFirestore();
   }
 
   function brl(v) { return Number(v).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }); }
@@ -459,6 +477,8 @@
       root.innerHTML = renderPainel();
     } else if (telaAtual === 'calculadora') {
       root.innerHTML = renderCalculadora();
+    } else if (telaAtual === 'login') {
+      root.innerHTML = renderTelaLogin();
     }
   }
 
@@ -479,7 +499,14 @@
     html += '<div class="header-title">Controle de Obras</div>';
     html += '<div class="header-sub">' + estado.obras.length + ' obra(s) cadastrada(s)</div>';
     html += '</div>';
+    html += '<div class="header-user">';
+    if (usuarioAtual) {
+      const primeiroNome = (usuarioAtual.displayName || usuarioAtual.email || '').split(' ')[0];
+      html += '<span class="header-user-name">' + escapeHtml(primeiroNome) + '</span>';
+      html += '<button class="btn-logout" onclick="sair()">Sair</button>';
+    }
     html += '<button class="btn-theme" onclick="toggleTema()" title="Alternar tema">' + (temaEscuro ? '☀' : '◑') + '</button>';
+    html += '</div>';
     html += '</div>';
 
     if (estado.obras.length > 0) {
@@ -549,6 +576,7 @@
     html += '<div class="header-sub">Contrato: ' + brl(obra.contrato || 0) + ' | ' + status.nome + '</div>';
     html += '</div>';
     html += '<div style="display:flex;gap:8px;align-items:center;flex-shrink:0;">';
+    if (usuarioAtual) html += '<button class="btn-logout" onclick="sair()">Sair</button>';
     html += '<button class="btn-theme" onclick="toggleTema()" title="Alternar tema">' + (temaEscuro ? '☀' : '◑') + '</button>';
     html += '<button class="btn-back" onclick="voltarHome()">← Voltar</button>';
     html += '</div>';
@@ -1685,9 +1713,10 @@
     html += '<button class="rel-quinzena-pill' + (relatorioQuinzena === 2 ? ' active' : '') + '" data-q="2" onclick="setRelatorioQuinzena(2)">2ª Quinzena (dias 16–fim)</button>';
     html += '</div>';
 
-    html += '<label class="field-label">Trabalhador</label>';
+    html += '<label class="field-label">Trabalhador / Tipo</label>';
     html += '<select id="rel-trab" onchange="atualizarPreviewRelatorio()">';
-    html += '<option value="todos"' + (relatorioTrabId === 'todos' ? ' selected' : '') + '>Todos os trabalhadores</option>';
+    html += '<option value="todos"' + (relatorioTrabId === 'todos' ? ' selected' : '') + '>Todos os diaristas</option>';
+    html += '<option value="empreitadas"' + (relatorioTrabId === 'empreitadas' ? ' selected' : '') + '>── Empreitadas da Obra ──</option>';
     (obra.trabalhadores || []).forEach(t => {
       html += '<option value="' + t.id + '"' + (relatorioTrabId === t.id ? ' selected' : '') + '>' + escapeHtml(t.nome) + '</option>';
     });
@@ -1722,7 +1751,40 @@
     el.innerHTML = buildRelatorioHTML(obra, relatorioMes, relatorioQuinzena, relatorioTrabId);
   }
 
+  function _buildEmpreitadasPreviewHTML(obra) {
+    const empreitadas = obra.empreitadas || [];
+    if (empreitadas.length === 0) {
+      return '<div class="card-title">EMPREITADAS DA OBRA</div><div class="empty">Nenhuma empreitada cadastrada nesta obra.</div>';
+    }
+    let totalPago = 0; let totalAPagar = 0;
+    empreitadas.forEach(e => {
+      if (e.pago) totalPago += Number(e.valor || 0); else totalAPagar += Number(e.valor || 0);
+      if (e.bonus) { if (e.bonusPago) totalPago += Number(e.bonus || 0); else totalAPagar += Number(e.bonus || 0); }
+    });
+    let html = '<div class="card-title">EMPREITADAS DA OBRA</div>';
+    empreitadas.forEach(e => {
+      const statusCor = e.pago ? 'var(--green)' : 'var(--amber)';
+      const statusTxt = e.pago ? 'Pago' : 'A pagar';
+      html += '<div class="lancamento">';
+      html += '<div><div class="lanc-desc">' + escapeHtml(e.nome) + '</div>';
+      if (Number(e.bonus || 0) > 0) {
+        const bonusCor = e.bonusPago ? 'var(--green)' : 'var(--ink-3)';
+        html += '<div class="lanc-data">Bônus: ' + brl(e.bonus) + ' — <span style="color:' + bonusCor + ';">' + (e.bonusPago ? 'Pago' : 'A pagar') + '</span></div>';
+      }
+      html += '</div>';
+      html += '<div class="lanc-right"><div><div class="lanc-valor">' + brl(e.valor) + '</div>';
+      html += '<div style="font-size:11px;font-weight:600;color:' + statusCor + ';text-align:right;margin-top:2px;">' + statusTxt + '</div></div></div></div>';
+    });
+    html += '<div class="rel-total-dinheiro" style="margin-top:12px;">';
+    html += '<span class="rel-total-label">TOTAL PAGO</span><span class="rel-total-valor">' + brl(totalPago) + '</span></div>';
+    if (totalAPagar > 0) {
+      html += '<div class="rel-marmita-line"><span>A pagar</span><span>' + brl(totalAPagar) + '</span></div>';
+    }
+    return html;
+  }
+
   function buildRelatorioHTML(obra, mes, quinzena, trabId) {
+    if (trabId === 'empreitadas') return _buildEmpreitadasPreviewHTML(obra);
     if (!mes) return '<div class="empty">Selecione um mês.</div>';
     const parts = mes.split('-');
     const ano = parseInt(parts[0]);
@@ -1756,7 +1818,7 @@
 
     let html = '<div class="card-title">' + periodoLabel.toUpperCase() + '</div>';
 
-    if (trabIds.length === 0 && !(obra.empreitadas || []).length) {
+    if (trabIds.length === 0) {
       return html + '<div class="empty">Nenhum lançamento neste período.</div>';
     }
 
@@ -1808,29 +1870,6 @@
       html += '</div>';
     });
 
-    // Seção empreitadas
-    const empreitadas = obra.empreitadas || [];
-    if (empreitadas.length > 0) {
-      html += '<div style="margin-top:8px;">';
-      html += '<div class="card-title" style="margin-top:8px; margin-bottom:14px;">EMPREITADAS DA OBRA</div>';
-      empreitadas.forEach(e => {
-        const statusCor = e.pago ? 'var(--green)' : 'var(--amber)';
-        const statusTxt = e.pago ? 'Pago' : 'A pagar';
-        html += '<div class="lancamento">';
-        html += '<div><div class="lanc-desc">' + escapeHtml(e.nome) + '</div>';
-        if (Number(e.bonus || 0) > 0) {
-          const bonusCor = e.bonusPago ? 'var(--green)' : 'var(--ink-3)';
-          html += '<div class="lanc-data">Bônus: ' + brl(e.bonus) + ' — <span style="color:' + bonusCor + ';">' + (e.bonusPago ? 'Pago' : 'A pagar') + '</span></div>';
-        }
-        html += '</div>';
-        html += '<div class="lanc-right">';
-        html += '<div><div class="lanc-valor">' + brl(e.valor) + '</div>';
-        html += '<div style="font-size:11px; font-weight:600; color:' + statusCor + '; text-align:right; margin-top:2px;">' + statusTxt + '</div></div>';
-        html += '</div></div>';
-      });
-      html += '</div>';
-    }
-
     return html;
   }
 
@@ -1853,7 +1892,103 @@
     }
   }
 
+  function _gerarPDFEmpreitadas(obra) {
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF({ unit: 'mm', format: 'a4' });
+    const PW = 210; const PH = 297;
+    const ML = 15; const MR = 15; const CW = PW - ML - MR;
+    const mesNomes = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
+    const parts = relatorioMes.split('-');
+    const ano = parseInt(parts[0]);
+    const mesNum = parseInt(parts[1]);
+    const mesNome = mesNomes[mesNum - 1] || '';
+    const periodoLabel = (relatorioQuinzena === 1 ? '1ª Quinzena' : '2ª Quinzena') + ' — ' + mesNome + '/' + ano;
+
+    doc.setFillColor(115, 1, 140);
+    doc.rect(0, 0, PW, 28, 'F');
+    doc.setTextColor(255, 255, 255);
+    doc.setFontSize(16); doc.setFont('helvetica', 'bold');
+    doc.text('AS CONSTRUCTION', ML, 11);
+    doc.setFontSize(9); doc.setFont('helvetica', 'normal');
+    doc.text('Relatório de Empreitadas', ML, 18);
+
+    let y = 36;
+    doc.setTextColor(80, 80, 80); doc.setFontSize(9); doc.setFont('helvetica', 'normal');
+    doc.text('Obra: ', ML, y); doc.setTextColor(30, 30, 30); doc.setFont('helvetica', 'bold');
+    doc.text(obra.nome, ML + 11, y); y += 6;
+    doc.setTextColor(80, 80, 80); doc.setFont('helvetica', 'normal');
+    doc.text('Período de referência: ', ML, y); doc.setTextColor(30, 30, 30); doc.setFont('helvetica', 'bold');
+    doc.text(periodoLabel, ML + 38, y); y += 12;
+
+    doc.setDrawColor(220, 220, 220); doc.line(ML, y - 4, PW - MR, y - 4);
+    doc.setTextColor(100, 100, 100); doc.setFontSize(8); doc.setFont('helvetica', 'bold');
+    doc.text('EMPREITADAS DA OBRA', ML, y); y += 8;
+
+    const empreitadas = obra.empreitadas || [];
+    let totalPago = 0; let totalAPagar = 0;
+
+    const checkPage = (needed) => {
+      if (y + needed > PH - 20) {
+        doc.setTextColor(180, 180, 180); doc.setFontSize(8); doc.setFont('helvetica', 'normal');
+        doc.text('Gerado em ' + dateBR(hojeISO()) + ' — AS Construction', ML, PH - 8);
+        doc.addPage();
+        doc.setFillColor(115, 1, 140); doc.rect(0, 0, PW, 28, 'F');
+        doc.setTextColor(255, 255, 255); doc.setFontSize(16); doc.setFont('helvetica', 'bold');
+        doc.text('AS CONSTRUCTION', ML, 11);
+        y = 36;
+      }
+    };
+
+    if (empreitadas.length === 0) {
+      doc.setTextColor(150, 150, 150); doc.setFontSize(9);
+      doc.text('Nenhuma empreitada cadastrada.', ML, y); y += 8;
+    } else {
+      // Table header
+      doc.setFillColor(245, 245, 245); doc.rect(ML, y - 4, CW, 7, 'F');
+      doc.setTextColor(100, 100, 100); doc.setFontSize(8); doc.setFont('helvetica', 'bold');
+      doc.text('EMPREITEIRO', ML + 1, y); doc.text('VALOR', ML + 100, y); doc.text('STATUS', PW - MR - 2, y, { align: 'right' });
+      y += 5; doc.setDrawColor(220, 220, 220); doc.line(ML, y - 2, PW - MR, y - 2);
+
+      empreitadas.forEach(e => {
+        checkPage(10);
+        doc.setTextColor(30, 30, 30); doc.setFontSize(9); doc.setFont('helvetica', 'bold');
+        doc.text(escapeHtml(e.nome), ML + 1, y);
+        doc.setFont('helvetica', 'normal');
+        doc.text(brl(e.valor), ML + 100, y);
+        const statusTxt = e.pago ? 'Pago' : 'A pagar';
+        doc.setTextColor(e.pago ? 5 : 180, e.pago ? 150 : 120, e.pago ? 105 : 0);
+        doc.text(statusTxt, PW - MR - 2, y, { align: 'right' });
+        if (e.pago) totalPago += Number(e.valor || 0); else totalAPagar += Number(e.valor || 0);
+        if (Number(e.bonus || 0) > 0) {
+          y += 5; checkPage(6);
+          doc.setTextColor(120, 120, 120); doc.setFontSize(8); doc.setFont('helvetica', 'normal');
+          doc.text('  Bônus: ' + brl(e.bonus) + ' — ' + (e.bonusPago ? 'Pago' : 'A pagar'), ML + 1, y);
+          if (e.bonusPago) totalPago += Number(e.bonus || 0); else totalAPagar += Number(e.bonus || 0);
+        }
+        y += 7; doc.setDrawColor(235, 235, 235); doc.setTextColor(30,30,30); doc.line(ML, y - 2, PW - MR, y - 2);
+      });
+
+      y += 4; checkPage(14);
+      doc.setFillColor(243, 229, 247); doc.rect(ML, y - 4, CW, 10, 'F');
+      doc.setTextColor(115, 1, 140); doc.setFontSize(10); doc.setFont('helvetica', 'bold');
+      doc.text('TOTAL PAGO', ML + 2, y + 1);
+      doc.text(brl(totalPago), PW - MR - 2, y + 1, { align: 'right' });
+      y += 12;
+      if (totalAPagar > 0) {
+        checkPage(8);
+        doc.setTextColor(120, 120, 120); doc.setFontSize(9); doc.setFont('helvetica', 'normal');
+        doc.text('A pagar:', ML + 2, y);
+        doc.text(brl(totalAPagar), PW - MR - 2, y, { align: 'right' });
+      }
+    }
+
+    doc.setTextColor(180, 180, 180); doc.setFontSize(8); doc.setFont('helvetica', 'normal');
+    doc.text('Gerado em ' + dateBR(hojeISO()) + ' — AS Construction', ML, PH - 8);
+    doc.save('relatorio-empreitadas-' + relatorioMes + '-Q' + relatorioQuinzena + '.pdf');
+  }
+
   function _gerarPDF(obra) {
+    if (relatorioTrabId === 'empreitadas') { _gerarPDFEmpreitadas(obra); return; }
     const { jsPDF } = window.jspdf;
     const doc = new jsPDF({ unit: 'mm', format: 'a4' });
     const PW = 210; const PH = 297;
@@ -2005,34 +2140,6 @@
       }
     });
 
-    // Empreitadas
-    const empreitadas = obra.empreitadas || [];
-    if (empreitadas.length > 0) {
-      y += 6; checkPage(14);
-      doc.setDrawColor(220, 220, 220); doc.line(ML, y - 4, PW - MR, y - 4);
-      doc.setTextColor(100, 100, 100); doc.setFontSize(8); doc.setFont('helvetica', 'bold');
-      doc.text('EMPREITADAS DA OBRA', ML, y); y += 8;
-
-      empreitadas.forEach(e => {
-        checkPage(8);
-        doc.setTextColor(30, 30, 30); doc.setFontSize(9); doc.setFont('helvetica', 'bold');
-        doc.text(escapeHtml(e.nome), ML + 1, y);
-        doc.setFont('helvetica', 'normal');
-        const statusTxt = e.pago ? 'Pago' : 'A pagar';
-        doc.setTextColor(e.pago ? 5 : 180, e.pago ? 150 : 120, e.pago ? 105 : 0);
-        doc.text(statusTxt, PW - MR - 2, y, { align: 'right' });
-        doc.setTextColor(30, 30, 30);
-        doc.text(brl(e.valor), PW - MR - 22, y, { align: 'right' });
-        if (Number(e.bonus || 0) > 0) {
-          y += 5; checkPage(6);
-          doc.setTextColor(120, 120, 120); doc.setFontSize(8);
-          doc.text('  Bônus: ' + brl(e.bonus) + ' — ' + (e.bonusPago ? 'Pago' : 'A pagar'), ML + 1, y);
-        }
-        y += 7;
-        doc.setDrawColor(235, 235, 235); doc.line(ML, y - 2, PW - MR, y - 2);
-      });
-    }
-
     addFooter();
     const trabNomeSlug = relatorioTrabId === 'todos' ? 'equipe' : (grupos[relatorioTrabId]?.nome || 'trabalhador').replace(/\s+/g, '-').toLowerCase();
     doc.save('relatorio-' + trabNomeSlug + '-' + relatorioMes + '-Q' + relatorioQuinzena + '.pdf');
@@ -2053,6 +2160,7 @@
     } catch(e) {
       alert('Erro ao salvar orçamento: ' + e.message);
     }
+    salvarOrcamentosNaFirestore();
   }
 
   function abrirCalculadora() {
@@ -2368,8 +2476,130 @@
     salvar();
   }
 
+  // ============ FIREBASE — Login + Nuvem ============
+
+  function renderTelaLogin() {
+    const googleSVG = '<svg width="18" height="18" viewBox="0 0 18 18" xmlns="http://www.w3.org/2000/svg"><path d="M17.64 9.2c0-.637-.057-1.251-.164-1.84H9v3.481h4.844c-.209 1.118-.843 2.065-1.796 2.702v2.246h2.908C16.534 14.175 17.64 11.9 17.64 9.2z" fill="#4285F4"/><path d="M9 18c2.43 0 4.467-.806 5.956-2.18l-2.908-2.246c-.806.54-1.837.86-3.048.86-2.344 0-4.328-1.584-5.036-3.711H.957v2.318C2.438 15.983 5.482 18 9 18z" fill="#34A853"/><path d="M3.964 10.712A5.413 5.413 0 0 1 3.682 9c0-.593.102-1.17.282-1.712V4.97H.957A8.996 8.996 0 0 0 0 9c0 1.452.348 2.827.957 4.03l3.007-2.318z" fill="#FBBC05"/><path d="M9 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.463.891 11.426 0 9 0 5.482 0 2.438 2.017.957 4.969L3.964 6.288C4.672 4.161 6.656 3.58 9 3.58z" fill="#EA4335"/></svg>';
+    return '<div class="tela-login"><div class="login-card">'
+      + '<div class="login-logo">AS Construction</div>'
+      + '<div class="login-tag">Controle de Obras</div>'
+      + '<div class="login-sub">Entre com sua conta Google para acessar seus dados em qualquer dispositivo.</div>'
+      + '<button class="btn-google" id="btn-login-google" onclick="entrarComGoogle()">'
+      + googleSVG + 'Entrar com Google</button>'
+      + '</div></div>';
+  }
+
+  async function entrarComGoogle() {
+    if (!window._firebaseSignIn) { alert('Aguarde o carregamento...'); return; }
+    const btn = document.getElementById('btn-login-google');
+    if (btn) { btn.disabled = true; btn.textContent = 'Entrando...'; }
+    try {
+      await window._firebaseSignIn();
+    } catch(e) {
+      if (btn) {
+        btn.disabled = false;
+        const googleSVG = '<svg width="18" height="18" viewBox="0 0 18 18" xmlns="http://www.w3.org/2000/svg"><path d="M17.64 9.2c0-.637-.057-1.251-.164-1.84H9v3.481h4.844c-.209 1.118-.843 2.065-1.796 2.702v2.246h2.908C16.534 14.175 17.64 11.9 17.64 9.2z" fill="#4285F4"/><path d="M9 18c2.43 0 4.467-.806 5.956-2.18l-2.908-2.246c-.806.54-1.837.86-3.048.86-2.344 0-4.328-1.584-5.036-3.711H.957v2.318C2.438 15.983 5.482 18 9 18z" fill="#34A853"/><path d="M3.964 10.712A5.413 5.413 0 0 1 3.682 9c0-.593.102-1.17.282-1.712V4.97H.957A8.996 8.996 0 0 0 0 9c0 1.452.348 2.827.957 4.03l3.007-2.318z" fill="#FBBC05"/><path d="M9 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.463.891 11.426 0 9 0 5.482 0 2.438 2.017.957 4.969L3.964 6.288C4.672 4.161 6.656 3.58 9 3.58z" fill="#EA4335"/></svg>';
+        btn.innerHTML = googleSVG + 'Entrar com Google';
+      }
+      if (e.code !== 'auth/popup-closed-by-user') alert('Erro ao entrar: ' + (e.message || e));
+    }
+  }
+
+  async function sair() {
+    if (!confirm('Deseja sair da sua conta?')) return;
+    if (window._firebaseSignOut) await window._firebaseSignOut();
+    usuarioAtual = null;
+    estado = { obras: [] };
+    orcamentos = [];
+    telaAtual = 'login';
+    render();
+  }
+
+  async function carregarDaFirestore() {
+    if (!usuarioAtual || !window._firebase) return;
+    const { db, firestoreDoc, firestoreGetDoc } = window._firebase;
+    try {
+      const uid = usuarioAtual.uid;
+      const [obrasSnap, orcsSnap] = await Promise.all([
+        firestoreGetDoc(firestoreDoc(db, 'usuarios', uid, 'dados', 'obras')),
+        firestoreGetDoc(firestoreDoc(db, 'usuarios', uid, 'dados', 'orcamentos'))
+      ]);
+      if (obrasSnap.exists()) {
+        const data = obrasSnap.data();
+        estado = { obras: migrarObras(data.obras || []) };
+      }
+      if (orcsSnap.exists()) {
+        orcamentos = orcsSnap.data().orcamentos || [];
+      }
+    } catch(e) { console.error('Firestore load:', e); }
+  }
+
+  async function salvarNaFirestore() {
+    if (!usuarioAtual || !window._firebase) return;
+    const { db, firestoreDoc, firestoreSetDoc } = window._firebase;
+    try {
+      await firestoreSetDoc(firestoreDoc(db, 'usuarios', usuarioAtual.uid, 'dados', 'obras'), { obras: estado.obras });
+    } catch(e) { console.error('Firestore save obras:', e); }
+  }
+
+  async function salvarOrcamentosNaFirestore() {
+    if (!usuarioAtual || !window._firebase) return;
+    const { db, firestoreDoc, firestoreSetDoc } = window._firebase;
+    try {
+      await firestoreSetDoc(firestoreDoc(db, 'usuarios', usuarioAtual.uid, 'dados', 'orcamentos'), { orcamentos: orcamentos });
+    } catch(e) { console.error('Firestore save orcs:', e); }
+  }
+
+  function renderModalMigracao(nObras) {
+    return '<div class="modal-title" style="margin-bottom:12px;">Migrar dados para a nuvem?</div>'
+      + '<p style="font-size:14px;color:var(--ink-2);margin-bottom:20px;line-height:1.6;">Encontramos <strong>' + nObras + ' obra(s)</strong> salvas neste dispositivo. Deseja migrar para sua conta e acessar de qualquer lugar?</p>'
+      + '<button class="btn-primary" onclick="window._confirmarMigracao()">Migrar agora</button>'
+      + '<button class="btn-secondary" style="margin-top:8px;" onclick="window._ignorarMigracao()">Ignorar (manter só aqui)</button>';
+  }
+
+  function verificarMigracao() {
+    if (estado.obras.length > 0) return false;
+    const localRaw = localStorage.getItem(KEY);
+    if (!localRaw) return false;
+    let localObras = [];
+    try { localObras = JSON.parse(localRaw).obras || []; } catch(e) { return false; }
+    if (localObras.length === 0) return false;
+    document.getElementById('modal-content').innerHTML = renderModalMigracao(localObras.length);
+    document.getElementById('modal-bg').classList.add('show');
+    window._confirmarMigracao = async () => {
+      document.getElementById('modal-bg').classList.remove('show');
+      estado = { obras: migrarObras(localObras) };
+      try { const localOrcs = JSON.parse(localStorage.getItem(KEY_ORC) || '[]'); orcamentos = Array.isArray(localOrcs) ? localOrcs : []; } catch(e) { orcamentos = []; }
+      await Promise.all([salvarNaFirestore(), salvarOrcamentosNaFirestore()]);
+      telaAtual = 'home';
+      render();
+    };
+    window._ignorarMigracao = () => {
+      document.getElementById('modal-bg').classList.remove('show');
+      telaAtual = 'home';
+      render();
+    };
+    return true;
+  }
+
   inicializarAtmosphera();
-  render();
+
+  document.getElementById('root').innerHTML =
+    '<div style="display:flex;align-items:center;justify-content:center;height:80vh;color:var(--ink-3);font-size:15px;font-family:-apple-system,sans-serif;">Carregando...</div>';
+
+  window._firebaseInitTimeout = setTimeout(() => {
+    if (!usuarioAtual && telaAtual !== 'home') { telaAtual = 'home'; render(); }
+  }, 8000);
+
+  window._onAuthStateChanged = async function(user) {
+    clearTimeout(window._firebaseInitTimeout);
+    usuarioAtual = user;
+    if (!user) { telaAtual = 'login'; render(); return; }
+    await carregarDaFirestore();
+    if (verificarMigracao()) return;
+    if (telaAtual === 'login') telaAtual = 'home';
+    render();
+  };
 </script>
 
 <script type="module">
@@ -2384,6 +2614,36 @@
     });
     return msg.content[0].text;
   };
+</script>
+
+<script type="module">
+  import { initializeApp } from 'https://esm.sh/firebase@10/app';
+  import { getAuth, signInWithPopup, GoogleAuthProvider, onAuthStateChanged, signOut }
+    from 'https://esm.sh/firebase@10/auth';
+  import { getFirestore, doc, getDoc, setDoc }
+    from 'https://esm.sh/firebase@10/firestore';
+  import { getStorage } from 'https://esm.sh/firebase@10/storage';
+
+  const app = initializeApp({
+    apiKey: "AIzaSyBkV7nEO90Kby-MnGXOYOqK2Lh2Hdld7Xg",
+    authDomain: "asconstruction-e7954.firebaseapp.com",
+    projectId: "asconstruction-e7954",
+    storageBucket: "asconstruction-e7954.firebasestorage.app",
+    messagingSenderId: "650794536625",
+    appId: "1:650794536625:web:0fab4ec617123b7883dc90"
+  });
+
+  const auth    = getAuth(app);
+  const db      = getFirestore(app);
+  const storage = getStorage(app);
+
+  window._firebase = { auth, db, storage, firestoreDoc: doc, firestoreGetDoc: getDoc, firestoreSetDoc: setDoc };
+  window._firebaseSignIn  = () => signInWithPopup(auth, new GoogleAuthProvider());
+  window._firebaseSignOut = () => signOut(auth);
+
+  onAuthStateChanged(auth, user => {
+    if (window._onAuthStateChanged) window._onAuthStateChanged(user);
+  });
 </script>
 </body>
 </html>
