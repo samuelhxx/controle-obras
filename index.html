@@ -8,6 +8,9 @@
 <meta name="apple-mobile-web-app-title" content="AS Obras">
 <meta name="theme-color" content="#73018C">
 <title>AS Construction — Controle de Obras</title>
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
 <style>
   :root {
     --ink: #111111;
@@ -2485,25 +2488,13 @@
       + '<div class="login-logo">AS Construction</div>'
       + '<div class="login-tag">Controle de Obras</div>'
       + '<div class="login-sub">Entre com sua conta Google para acessar seus dados em qualquer dispositivo.</div>'
-      + '<button class="btn-google" id="btn-login-google" onclick="entrarComGoogle()" disabled style="opacity:0.55;cursor:default;">'
-      + 'Carregando...</button>'
+      + '<button class="btn-google" id="btn-login-google" onclick="entrarComGoogle()">'
+      + googleSVG + 'Entrar com Google</button>'
       + '</div></div>';
   }
 
   async function entrarComGoogle() {
     const btn = document.getElementById('btn-login-google');
-    if (!window._firebaseSignIn) {
-      if (btn) { btn.textContent = 'Aguarde...'; btn.disabled = true; }
-      let tentativas = 0;
-      while (!window._firebaseSignIn && tentativas < 20) {
-        await new Promise(r => setTimeout(r, 300));
-        tentativas++;
-      }
-      if (!window._firebaseSignIn) {
-        if (btn) { btn.textContent = 'Erro — recarregue a página'; btn.disabled = false; }
-        return;
-      }
-    }
     if (btn) { btn.disabled = true; btn.textContent = 'Entrando...'; }
     try {
       await window._firebaseSignIn();
@@ -2528,38 +2519,34 @@
   }
 
   async function carregarDaFirestore() {
-    if (!usuarioAtual || !window._firebase) return;
-    const { db, firestoreDoc, firestoreGetDoc } = window._firebase;
+    if (!usuarioAtual || !window._fbdb) return;
     try {
       const uid = usuarioAtual.uid;
       const [obrasSnap, orcsSnap] = await Promise.all([
-        firestoreGetDoc(firestoreDoc(db, 'usuarios', uid, 'dados', 'obras')),
-        firestoreGetDoc(firestoreDoc(db, 'usuarios', uid, 'dados', 'orcamentos'))
+        window._fbdb.collection('usuarios').doc(uid).collection('dados').doc('obras').get(),
+        window._fbdb.collection('usuarios').doc(uid).collection('dados').doc('orcamentos').get()
       ]);
-      if (obrasSnap.exists()) {
+      if (obrasSnap.exists) {
         _firestoreHadData = true;
-        const data = obrasSnap.data();
-        estado = { obras: migrarObras(data.obras || []) };
+        estado = { obras: migrarObras(obrasSnap.data().obras || []) };
       }
-      if (orcsSnap.exists()) {
+      if (orcsSnap.exists) {
         orcamentos = orcsSnap.data().orcamentos || [];
       }
     } catch(e) { console.error('Firestore load:', e); }
   }
 
   async function salvarNaFirestore() {
-    if (!usuarioAtual || !window._firebase) return;
-    const { db, firestoreDoc, firestoreSetDoc } = window._firebase;
+    if (!usuarioAtual || !window._fbdb) return;
     try {
-      await firestoreSetDoc(firestoreDoc(db, 'usuarios', usuarioAtual.uid, 'dados', 'obras'), { obras: estado.obras });
+      await window._fbdb.collection('usuarios').doc(usuarioAtual.uid).collection('dados').doc('obras').set({ obras: estado.obras });
     } catch(e) { console.error('Firestore save obras:', e); }
   }
 
   async function salvarOrcamentosNaFirestore() {
-    if (!usuarioAtual || !window._firebase) return;
-    const { db, firestoreDoc, firestoreSetDoc } = window._firebase;
+    if (!usuarioAtual || !window._fbdb) return;
     try {
-      await firestoreSetDoc(firestoreDoc(db, 'usuarios', usuarioAtual.uid, 'dados', 'orcamentos'), { orcamentos: orcamentos });
+      await window._fbdb.collection('usuarios').doc(usuarioAtual.uid).collection('dados').doc('orcamentos').set({ orcamentos: orcamentos });
     } catch(e) { console.error('Firestore save orcs:', e); }
   }
 
@@ -2600,12 +2587,7 @@
   document.getElementById('root').innerHTML =
     '<div style="display:flex;align-items:center;justify-content:center;height:80vh;color:var(--ink-3);font-size:15px;font-family:-apple-system,sans-serif;">Carregando...</div>';
 
-  window._firebaseInitTimeout = setTimeout(() => {
-    if (!usuarioAtual) { telaAtual = 'home'; render(); }
-  }, 8000);
-
   window._onAuthStateChanged = async function(user) {
-    clearTimeout(window._firebaseInitTimeout);
     usuarioAtual = user;
     if (!user) { telaAtual = 'login'; render(); return; }
     await carregarDaFirestore();
@@ -2613,6 +2595,28 @@
     if (telaAtual === 'login') telaAtual = 'home';
     render();
   };
+
+  try {
+    const fbApp  = firebase.initializeApp({
+      apiKey: "AIzaSyBkV7nEO90Kby-MnGXOYOqK2Lh2Hdld7Xg",
+      authDomain: "asconstruction-e7954.firebaseapp.com",
+      projectId: "asconstruction-e7954",
+      storageBucket: "asconstruction-e7954.firebasestorage.app",
+      messagingSenderId: "650794536625",
+      appId: "1:650794536625:web:0fab4ec617123b7883dc90"
+    });
+    const fbAuth = firebase.auth();
+    window._fbdb             = firebase.firestore();
+    window._firebaseSignIn   = () => fbAuth.signInWithPopup(new firebase.auth.GoogleAuthProvider());
+    window._firebaseSignOut  = () => fbAuth.signOut();
+
+    fbAuth.onAuthStateChanged(user => {
+      if (window._onAuthStateChanged) window._onAuthStateChanged(user);
+    });
+  } catch(e) {
+    console.error('Firebase init error:', e);
+    if (window._onAuthStateChanged) window._onAuthStateChanged(null);
+  }
 </script>
 
 <script type="module">
@@ -2629,54 +2633,5 @@
   };
 </script>
 
-<script type="module">
-  (async () => {
-    const BASE = 'https://www.gstatic.com/firebasejs/10.12.0';
-    try {
-      const { initializeApp }  = await import(BASE + '/firebase-app.js');
-      const { getAuth, signInWithPopup, GoogleAuthProvider, onAuthStateChanged, signOut }
-        = await import(BASE + '/firebase-auth.js');
-      const { getFirestore, doc, getDoc, setDoc }
-        = await import(BASE + '/firebase-firestore.js');
-      const { getStorage }     = await import(BASE + '/firebase-storage.js');
-
-      const app     = initializeApp({
-        apiKey: "AIzaSyBkV7nEO90Kby-MnGXOYOqK2Lh2Hdld7Xg",
-        authDomain: "asconstruction-e7954.firebaseapp.com",
-        projectId: "asconstruction-e7954",
-        storageBucket: "asconstruction-e7954.firebasestorage.app",
-        messagingSenderId: "650794536625",
-        appId: "1:650794536625:web:0fab4ec617123b7883dc90"
-      });
-      const auth    = getAuth(app);
-      const db      = getFirestore(app);
-      const storage = getStorage(app);
-
-      window._firebase        = { auth, db, storage, firestoreDoc: doc, firestoreGetDoc: getDoc, firestoreSetDoc: setDoc };
-      window._firebaseSignIn  = () => signInWithPopup(auth, new GoogleAuthProvider());
-      window._firebaseSignOut = () => signOut(auth);
-
-      // Habilita o botão de login se já estiver visível
-      const btn = document.getElementById('btn-login-google');
-      if (btn) {
-        const svg = '<svg width="18" height="18" viewBox="0 0 18 18" xmlns="http://www.w3.org/2000/svg"><path d="M17.64 9.2c0-.637-.057-1.251-.164-1.84H9v3.481h4.844c-.209 1.118-.843 2.065-1.796 2.702v2.246h2.908C16.534 14.175 17.64 11.9 17.64 9.2z" fill="#4285F4"/><path d="M9 18c2.43 0 4.467-.806 5.956-2.18l-2.908-2.246c-.806.54-1.837.86-3.048.86-2.344 0-4.328-1.584-5.036-3.711H.957v2.318C2.438 15.983 5.482 18 9 18z" fill="#34A853"/><path d="M3.964 10.712A5.413 5.413 0 0 1 3.682 9c0-.593.102-1.17.282-1.712V4.97H.957A8.996 8.996 0 0 0 0 9c0 1.452.348 2.827.957 4.03l3.007-2.318z" fill="#FBBC05"/><path d="M9 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.463.891 11.426 0 9 0 5.482 0 2.438 2.017.957 4.969L3.964 6.288C4.672 4.161 6.656 3.58 9 3.58z" fill="#EA4335"/></svg>';
-        btn.disabled = false;
-        btn.style.opacity = '';
-        btn.style.cursor = '';
-        btn.innerHTML = svg + 'Entrar com Google';
-      }
-
-      onAuthStateChanged(auth, user => {
-        if (window._onAuthStateChanged) window._onAuthStateChanged(user);
-      });
-    } catch(e) {
-      console.error('Firebase falhou ao inicializar:', e);
-      clearTimeout(window._firebaseInitTimeout);
-      const btn = document.getElementById('btn-login-google');
-      if (btn) { btn.disabled = false; btn.style.opacity = ''; btn.style.cursor = ''; btn.textContent = 'Recarregue a página'; }
-      if (window._onAuthStateChanged) window._onAuthStateChanged(null);
-    }
-  })();
-</script>
 </body>
 </html>
