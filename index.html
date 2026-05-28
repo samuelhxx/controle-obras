@@ -2588,7 +2588,7 @@
     '<div style="display:flex;align-items:center;justify-content:center;height:80vh;color:var(--ink-3);font-size:15px;font-family:-apple-system,sans-serif;">Carregando...</div>';
 
   window._firebaseInitTimeout = setTimeout(() => {
-    if (!usuarioAtual && telaAtual !== 'home') { telaAtual = 'home'; render(); }
+    if (!usuarioAtual) { telaAtual = 'home'; render(); }
   }, 8000);
 
   window._onAuthStateChanged = async function(user) {
@@ -2617,33 +2617,41 @@
 </script>
 
 <script type="module">
-  import { initializeApp } from 'https://esm.sh/firebase@10/app';
-  import { getAuth, signInWithPopup, GoogleAuthProvider, onAuthStateChanged, signOut }
-    from 'https://esm.sh/firebase@10/auth';
-  import { getFirestore, doc, getDoc, setDoc }
-    from 'https://esm.sh/firebase@10/firestore';
-  import { getStorage } from 'https://esm.sh/firebase@10/storage';
+  (async () => {
+    try {
+      const { initializeApp } = await import('https://esm.sh/firebase@10/app');
+      const { getAuth, signInWithPopup, GoogleAuthProvider, onAuthStateChanged, signOut }
+        = await import('https://esm.sh/firebase@10/auth');
+      const { getFirestore, doc, getDoc, setDoc }
+        = await import('https://esm.sh/firebase@10/firestore');
+      const { getStorage } = await import('https://esm.sh/firebase@10/storage');
 
-  const app = initializeApp({
-    apiKey: "AIzaSyBkV7nEO90Kby-MnGXOYOqK2Lh2Hdld7Xg",
-    authDomain: "asconstruction-e7954.firebaseapp.com",
-    projectId: "asconstruction-e7954",
-    storageBucket: "asconstruction-e7954.firebasestorage.app",
-    messagingSenderId: "650794536625",
-    appId: "1:650794536625:web:0fab4ec617123b7883dc90"
-  });
+      const app = initializeApp({
+        apiKey: "AIzaSyBkV7nEO90Kby-MnGXOYOqK2Lh2Hdld7Xg",
+        authDomain: "asconstruction-e7954.firebaseapp.com",
+        projectId: "asconstruction-e7954",
+        storageBucket: "asconstruction-e7954.firebasestorage.app",
+        messagingSenderId: "650794536625",
+        appId: "1:650794536625:web:0fab4ec617123b7883dc90"
+      });
 
-  const auth    = getAuth(app);
-  const db      = getFirestore(app);
-  const storage = getStorage(app);
+      const auth    = getAuth(app);
+      const db      = getFirestore(app);
+      const storage = getStorage(app);
 
-  window._firebase = { auth, db, storage, firestoreDoc: doc, firestoreGetDoc: getDoc, firestoreSetDoc: setDoc };
-  window._firebaseSignIn  = () => signInWithPopup(auth, new GoogleAuthProvider());
-  window._firebaseSignOut = () => signOut(auth);
+      window._firebase = { auth, db, storage, firestoreDoc: doc, firestoreGetDoc: getDoc, firestoreSetDoc: setDoc };
+      window._firebaseSignIn  = () => signInWithPopup(auth, new GoogleAuthProvider());
+      window._firebaseSignOut = () => signOut(auth);
 
-  onAuthStateChanged(auth, user => {
-    if (window._onAuthStateChanged) window._onAuthStateChanged(user);
-  });
+      onAuthStateChanged(auth, user => {
+        if (window._onAuthStateChanged) window._onAuthStateChanged(user);
+      });
+    } catch(e) {
+      console.error('Firebase falhou ao inicializar:', e);
+      clearTimeout(window._firebaseInitTimeout);
+      if (window._onAuthStateChanged) window._onAuthStateChanged(null);
+    }
+  })();
 </script>
 </body>
 </html>
