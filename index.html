@@ -218,6 +218,62 @@
     .resumo-cols { grid-template-columns: 1fr 1fr 1fr; }
     .resumo-cols > :last-child { grid-column: auto; }
   }
+
+  /* Dark mode */
+  [data-theme="dark"] {
+    --ink: #F0F0F0;
+    --ink-2: #AAAAAA;
+    --ink-3: #666666;
+    --ink-4: #444444;
+    --surface: #1C1C1E;
+    --bg: #111111;
+    --shadow-card: 0 2px 16px rgba(0,0,0,0.4);
+    --shadow-float: 0 8px 32px rgba(0,0,0,0.6);
+  }
+  [data-theme="dark"] .resultado { background: #1E1430; }
+  [data-theme="dark"] .trab-card { background: #1C1C1E; }
+  [data-theme="dark"] .trab-card.selected { background: #1E1430; }
+  [data-theme="dark"] .empreitada-form { background: #1C1C1E; }
+  [data-theme="dark"] .empreitada-item { background: #1C1C1E; }
+  [data-theme="dark"] .empreitada-item.pago { background: #1E1430; }
+  [data-theme="dark"] .chat-bubble-ai { background: #2C2C2E; color: var(--ink); }
+  [data-theme="dark"] .chat-welcome { background: rgba(115,1,140,0.15); }
+  [data-theme="dark"] .backup-text { background: #1C1C1E; }
+  [data-theme="dark"] input[type="date"],
+  [data-theme="dark"] input[type="text"],
+  [data-theme="dark"] select,
+  [data-theme="dark"] textarea { background: #1C1C1E; color: var(--ink); border-color: rgba(255,255,255,0.10); }
+  [data-theme="dark"] input:focus,
+  [data-theme="dark"] select:focus,
+  [data-theme="dark"] textarea:focus { background: #2C2C2E; }
+  [data-theme="dark"] .btn-toggle { background: #2C2C2E; color: var(--ink-2); border-color: rgba(255,255,255,0.10); }
+  [data-theme="dark"] .btn-cancel { background: #2C2C2E; }
+  [data-theme="dark"] .btn-mini { background: #2C2C2E; color: var(--ink-2); border-color: rgba(255,255,255,0.08); }
+  [data-theme="dark"] .btn-pago { background: #2C2C2E; border-color: rgba(255,255,255,0.10); }
+
+  /* Dark mode toggle button */
+  .btn-theme { background: rgba(255,255,255,0.15); color: #fff; border: 1px solid rgba(255,255,255,0.3); padding: 8px 11px; border-radius: 10px; font-size: 15px; cursor: pointer; font-family: inherit; flex-shrink: 0; transition: background 0.15s ease; line-height: 1; }
+  @media (hover: hover) { .btn-theme:hover { background: rgba(255,255,255,0.25); } }
+
+  /* Alert badges on obra cards */
+  .obra-alerts { display: flex; gap: 4px; flex-wrap: wrap; margin-top: 10px; }
+  .alerta { display: inline-flex; align-items: center; font-size: 10px; padding: 3px 8px; border-radius: 100px; font-weight: 600; letter-spacing: 0.2px; }
+  .alerta.red { background: rgba(220,38,38,0.10); color: var(--red); }
+  .alerta.amber { background: rgba(217,119,6,0.10); color: var(--amber); }
+
+  /* Painel comparativo */
+  .painel-table { width: 100%; border-collapse: collapse; }
+  .painel-table th { font-size: 10px; color: var(--ink-3); letter-spacing: 1.5px; font-weight: 700; text-transform: uppercase; padding: 0 14px 14px 0; text-align: left; border-bottom: 1px solid rgba(0,0,0,0.07); }
+  .painel-table td { padding: 14px 14px 14px 0; border-bottom: 1px solid rgba(0,0,0,0.04); vertical-align: middle; }
+  .painel-table tr:last-child td { border-bottom: none; }
+  .painel-table tbody tr { cursor: pointer; transition: background 0.12s ease; }
+  .painel-table tbody tr:hover { background: rgba(0,0,0,0.02); }
+  [data-theme="dark"] .painel-table tbody tr:hover { background: rgba(255,255,255,0.03); }
+  .painel-obra-nome { font-size: 14px; font-weight: 700; color: var(--ink); }
+  .painel-obra-cliente { font-size: 11px; color: var(--ink-3); margin-top: 2px; }
+  .margem-bar-wrap { display: flex; align-items: center; gap: 8px; }
+  .margem-bar { height: 6px; border-radius: 3px; min-width: 2px; flex-shrink: 0; transition: width 0.3s var(--ease); }
+  @media (max-width: 767px) { .painel-col-hide { display: none; } }
 </style>
 </head>
 <body>
@@ -233,6 +289,9 @@
 <script>
   const KEY = 'asConstruction_obras_v1';
   const KEY_IA = 'asConstruction_apiKey';
+  const KEY_THEME = 'asConstruction_theme';
+  let temaEscuro = localStorage.getItem(KEY_THEME) === 'dark';
+  if (temaEscuro) document.documentElement.setAttribute('data-theme', 'dark');
   let chatMensagens = [];
   let iaCarregando = false;
 
@@ -349,6 +408,8 @@
       if (rInput && !rInput.value) rInput.value = hojeISO();
     } else if (telaAtual === 'backup') {
       root.innerHTML = renderBackup();
+    } else if (telaAtual === 'painel') {
+      root.innerHTML = renderPainel();
     }
   }
 
@@ -368,7 +429,9 @@
     html += '<div class="header-tag">AS CONSTRUCTION</div>';
     html += '<div class="header-title">Controle de Obras</div>';
     html += '<div class="header-sub">' + estado.obras.length + ' obra(s) cadastrada(s)</div>';
-    html += '</div></div>';
+    html += '</div>';
+    html += '<button class="btn-theme" onclick="toggleTema()" title="Alternar tema">' + (temaEscuro ? '☀' : '◑') + '</button>';
+    html += '</div>';
 
     if (estado.obras.length > 0) {
       html += '<div class="card resultado">';
@@ -383,7 +446,8 @@
 
     html += '<div class="home-actions">';
     html += '<button class="btn-primary" onclick="abrirModalNovaObra()">+ Adicionar Nova Obra</button>';
-    html += '<button class="btn-secondary" onclick="abrirBackup()">Backup / Restaurar Dados</button>';
+    html += '<button class="btn-secondary" onclick="abrirPainel()">Painel Comparativo</button>';
+    html += '<button class="btn-secondary" onclick="abrirBackup()">Backup / Restaurar</button>';
     html += '</div>';
 
     if (estado.obras.length === 0) {
@@ -411,7 +475,14 @@
         html += '<div class="obra-stats">';
         html += '<div><div class="obra-stat-label">CONTRATO</div><div class="obra-stat-val" style="color: #73018C">' + brl(o.contrato || 0) + '</div></div>';
         html += '<div><div class="obra-stat-label">LUCRO PROJETADO</div><div class="obra-stat-val" style="color:' + (c.lucro >= 0 ? '#27AE60' : '#C0392B') + '">' + brl(c.lucro) + '</div></div>';
-        html += '</div></div>';
+        html += '</div>';
+        const alertas = gerarAlertas(o, c);
+        if (alertas.length > 0) {
+          html += '<div class="obra-alerts">';
+          alertas.forEach(a => { html += '<span class="alerta ' + a.tipo + '">' + a.texto + '</span>'; });
+          html += '</div>';
+        }
+        html += '</div>';
       });
       html += '</div>';
     }
@@ -427,7 +498,10 @@
     html += '<div class="header-title obra-title">' + escapeHtml(obra.nome) + '</div>';
     html += '<div class="header-sub">Contrato: ' + brl(obra.contrato || 0) + ' | ' + status.nome + '</div>';
     html += '</div>';
+    html += '<div style="display:flex;gap:8px;align-items:center;flex-shrink:0;">';
+    html += '<button class="btn-theme" onclick="toggleTema()" title="Alternar tema">' + (temaEscuro ? '☀' : '◑') + '</button>';
     html += '<button class="btn-back" onclick="voltarHome()">← Voltar</button>';
+    html += '</div>';
     html += '</div>';
 
     html += '<div class="tabs">';
@@ -684,7 +758,11 @@
     });
     hist.sort((a,b) => b.data.localeCompare(a.data));
 
-    let html = '<div class="card"><div class="card-title">HISTÓRICO COMPLETO (' + hist.length + ')</div>';
+    let html = '<div class="card">';
+    html += '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;">';
+    html += '<div style="font-size:10px;color:var(--ink-3);letter-spacing:2px;font-weight:700;text-transform:uppercase;">HISTÓRICO COMPLETO (' + hist.length + ')</div>';
+    html += '<button class="btn-mini" onclick="exportarCSV()">Exportar CSV</button>';
+    html += '</div>';
     if (hist.length === 0) {
       html += '<div class="empty">Sem lançamentos.</div>';
     } else {
@@ -820,7 +898,8 @@
     html += '<label class="field-label">Previsão de término</label><input type="date" id="ed-previsao" value="' + (o.dataPrevisao || '') + '">';
 
     html += '<button class="btn-primary" onclick="salvarEdicaoObra()">Salvar Alterações</button>';
-    html += '<button class="btn-danger" onclick="excluirObra()" style="margin-top: 16px;">Excluir esta obra</button>';
+    html += '<button class="btn-secondary" onclick="duplicarObra()" style="margin-top:8px;">Duplicar esta obra</button>';
+    html += '<button class="btn-danger" onclick="excluirObra()" style="margin-top:8px;">Excluir esta obra</button>';
     html += '</div>';
     return html;
   }
@@ -1347,6 +1426,182 @@
     iaCarregando = false;
     render();
     setTimeout(() => { const el = document.getElementById('chat-msgs'); if (el) el.scrollTop = el.scrollHeight; }, 50);
+  }
+
+  // ============ TEMA ============
+  function toggleTema() {
+    temaEscuro = !temaEscuro;
+    if (temaEscuro) {
+      document.documentElement.setAttribute('data-theme', 'dark');
+    } else {
+      document.documentElement.removeAttribute('data-theme');
+    }
+    localStorage.setItem(KEY_THEME, temaEscuro ? 'dark' : 'light');
+    document.querySelectorAll('.btn-theme').forEach(btn => {
+      btn.textContent = temaEscuro ? '☀' : '◑';
+    });
+  }
+
+  // ============ ALERTAS ============
+  function gerarAlertas(obra, c) {
+    const alertas = [];
+    if (obra.status === 'concluida') return alertas;
+    if (obra.contrato > 0 && c.margem < 10) {
+      alertas.push({ texto: 'Margem baixa', tipo: 'red' });
+    }
+    if (obra.contrato > 0 && c.custoTotal > obra.contrato * 0.8) {
+      alertas.push({ texto: 'Custos altos', tipo: 'amber' });
+    }
+    if (obra.dataPrevisao && obra.status === 'andamento') {
+      const hoje = new Date();
+      const prazo = new Date(obra.dataPrevisao + 'T12:00:00');
+      const dias = Math.round((prazo - hoje) / (1000 * 60 * 60 * 24));
+      if (dias < 0) {
+        alertas.push({ texto: 'Prazo vencido', tipo: 'red' });
+      } else if (dias <= 15) {
+        alertas.push({ texto: 'Prazo em ' + dias + 'd', tipo: 'amber' });
+      }
+    }
+    if (obra.contrato > 0 && c.totalRecebido > 0 && c.saldoReceber > obra.contrato * 0.5) {
+      alertas.push({ texto: 'A receber pendente', tipo: 'amber' });
+    }
+    return alertas;
+  }
+
+  // ============ DUPLICAR OBRA ============
+  function duplicarObra() {
+    const obra = getObra(obraAtualId);
+    if (!obra) return;
+    if (!confirm('Duplicar esta obra?\nEquipe e configurações serão copiadas. Lançamentos (diárias, gastos, empreitadas, recebimentos) não serão copiados.')) return;
+    const nova = {
+      id: 'obra_' + Date.now(),
+      nome: obra.nome + ' (cópia)',
+      cliente: obra.cliente,
+      contrato: obra.contrato,
+      impostoPct: obra.impostoPct,
+      dataInicio: '',
+      dataPrevisao: '',
+      status: 'andamento',
+      valorMarmita: obra.valorMarmita || 30,
+      nota: '',
+      diarias: [],
+      gastosAvulsos: [],
+      empreitadas: [],
+      trabalhadores: JSON.parse(JSON.stringify(obra.trabalhadores || [])),
+      recebimentos: [],
+      criadaEm: new Date().toISOString()
+    };
+    estado.obras.push(nova);
+    salvar();
+    abrirObra(nova.id);
+  }
+
+  // ============ EXPORT CSV ============
+  function exportarCSV() {
+    const obra = getObra(obraAtualId);
+    if (!obra) return;
+    const linhas = [['Data', 'Tipo', 'Descrição', 'Valor (R$)']];
+    (obra.diarias || []).sort((a,b) => a.data.localeCompare(b.data)).forEach(d => {
+      const periodoTxt = d.periodo === 'meio' ? ' (meio período)' : '';
+      linhas.push([d.data, 'Diária', d.trabNome + (d.marmita ? ' + marmita' : '') + periodoTxt, d.valor]);
+    });
+    (obra.gastosAvulsos || []).sort((a,b) => a.data.localeCompare(b.data)).forEach(g => {
+      linhas.push([g.data, getCategoriaNome(g.categoria), g.descricao || 'Gasto avulso', g.valor]);
+    });
+    (obra.empreitadas || []).forEach(e => {
+      if (e.pago) linhas.push(['-', 'Empreitada', e.nome, e.valor]);
+      if (e.bonusPago) linhas.push(['-', 'Bônus empreitada', e.nome, e.bonus]);
+    });
+    (obra.recebimentos || []).sort((a,b) => a.data.localeCompare(b.data)).forEach(r => {
+      linhas.push([r.data, 'Recebimento', r.descricao || 'Recebimento', r.valor]);
+    });
+    const csv = linhas.map(l => l.map(v => '"' + String(v).replace(/"/g, '""') + '"').join(',')).join('\r\n');
+    const blob = new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = obra.nome.replace(/[^a-zA-Z0-9À-ɏ]/g, '_') + '_historico.csv';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  }
+
+  // ============ PAINEL COMPARATIVO ============
+  function abrirPainel() {
+    telaAtual = 'painel';
+    render();
+    window.scrollTo(0, 0);
+  }
+
+  function renderPainel() {
+    let html = '<div class="header">';
+    html += '<div class="header-left">';
+    html += '<div class="header-tag">AS CONSTRUCTION</div>';
+    html += '<div class="header-title obra-title">Painel Comparativo</div>';
+    html += '</div>';
+    html += '<div style="display:flex;gap:8px;align-items:center;flex-shrink:0;">';
+    html += '<button class="btn-theme" onclick="toggleTema()" title="Alternar tema">' + (temaEscuro ? '☀' : '◑') + '</button>';
+    html += '<button class="btn-back" onclick="voltarHome()">← Voltar</button>';
+    html += '</div></div>';
+
+    if (estado.obras.length === 0) {
+      html += '<div class="card"><div class="empty">Nenhuma obra cadastrada.</div></div>';
+      return html;
+    }
+
+    let totalContrato = 0, totalLucro = 0, totalRecebido = 0;
+    const obrasCalc = estado.obras.map(o => {
+      const c = calcularObra(o);
+      totalContrato += Number(o.contrato || 0);
+      totalLucro += c.lucro;
+      totalRecebido += c.totalRecebido;
+      return { o, c };
+    }).sort((a, b) => a.c.margem - b.c.margem);
+
+    html += '<div class="resumo-cols">';
+    html += '<div class="card"><div class="card-title">RECEITA TOTAL</div><div class="info-value">' + brl(totalContrato) + '</div></div>';
+    html += '<div class="card"><div class="card-title">LUCRO PROJETADO</div><div class="info-value ' + (totalLucro >= 0 ? 'green' : 'red') + '">' + brl(totalLucro) + '</div></div>';
+    html += '<div class="card"><div class="card-title">TOTAL RECEBIDO</div><div class="info-value green">' + brl(totalRecebido) + '</div></div>';
+    html += '</div>';
+
+    html += '<div class="card"><div class="card-title">OBRAS — MENOR MARGEM PRIMEIRO</div>';
+    html += '<div style="overflow-x:auto;">';
+    html += '<table class="painel-table"><thead><tr>';
+    html += '<th>Obra</th>';
+    html += '<th class="painel-col-hide">Contrato</th>';
+    html += '<th class="painel-col-hide">Custo</th>';
+    html += '<th>Lucro</th>';
+    html += '<th>Margem</th>';
+    html += '<th class="painel-col-hide">Recebido</th>';
+    html += '<th>Status</th>';
+    html += '</tr></thead><tbody>';
+
+    obrasCalc.forEach(({ o, c }) => {
+      const status = getStatusInfo(o.status);
+      const margemColor = c.margem < 0 ? 'var(--red)' : c.margem < 10 ? 'var(--amber)' : 'var(--green)';
+      const barWidth = Math.max(2, Math.min(80, (Math.abs(c.margem) / 50) * 80));
+      let prazoBadge = '';
+      if (o.dataPrevisao && o.status === 'andamento') {
+        const dias = Math.round((new Date(o.dataPrevisao + 'T12:00:00') - new Date()) / 86400000);
+        if (dias < 0) prazoBadge = ' <span class="badge red">Vencida</span>';
+        else if (dias <= 15) prazoBadge = ' <span class="badge orange">+' + dias + 'd</span>';
+      }
+      html += '<tr onclick="abrirObra(\'' + o.id + '\')">';
+      html += '<td><div class="painel-obra-nome">' + escapeHtml(o.nome) + '</div>';
+      if (o.cliente) html += '<div class="painel-obra-cliente">' + escapeHtml(o.cliente) + '</div>';
+      html += '</td>';
+      html += '<td class="painel-col-hide" style="font-size:14px;font-weight:600;color:var(--ink)">' + brl(o.contrato || 0) + '</td>';
+      html += '<td class="painel-col-hide" style="font-size:14px;color:var(--ink-2)">' + brl(c.custoTotal) + '</td>';
+      html += '<td style="font-size:14px;font-weight:700;color:' + (c.lucro >= 0 ? 'var(--green)' : 'var(--red)') + '">' + brl(c.lucro) + '</td>';
+      html += '<td><div class="margem-bar-wrap"><div class="margem-bar" style="width:' + barWidth + 'px;background:' + margemColor + '"></div><span style="font-size:13px;font-weight:700;color:' + margemColor + '">' + c.margem.toFixed(1) + '%</span></div></td>';
+      html += '<td class="painel-col-hide" style="font-size:13px;color:var(--green)">' + brl(c.totalRecebido) + '</td>';
+      html += '<td><span class="badge ' + status.cor + '">' + status.nome + '</span>' + prazoBadge + '</td>';
+      html += '</tr>';
+    });
+
+    html += '</tbody></table></div></div>';
+    return html;
   }
 
   // INIT - Pré-cadastra Atmosphera apenas se não houver nenhuma obra
