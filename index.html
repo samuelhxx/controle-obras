@@ -696,6 +696,10 @@
         delete o.gasolina;
       }
 
+      // Campos de funcionalidades novas
+      if (!o.info) o.info = {};
+      if (!o.materiais) o.materiais = [];
+
       // Diárias antigas: garantir campo periodo
       if (o.diarias) {
         o.diarias.forEach(d => {
