@@ -417,21 +417,11 @@
     from { opacity: 0; transform: translateY(20px); }
     to   { opacity: 1; transform: translateY(0); }
   }
-  .login-mark { text-align: center; margin-bottom: 12px; }
-  .login-as {
-    display: block;
-    font-size: 72px; font-weight: 900;
-    color: #73018C; letter-spacing: 0.04em; line-height: 1;
-    margin-bottom: 5px;
+  .login-logo {
+    max-width: 210px; max-height: 100px; width: auto; height: auto;
+    margin-bottom: 36px; display: block; margin-left: auto; margin-right: auto;
   }
-  .login-wordmark {
-    display: block;
-    font-size: 15px; font-weight: 300;
-    color: #FFFFFF; letter-spacing: 0.38em;
-    text-transform: uppercase;
-    padding-left: 0.38em; /* compensação óptica do tracking */
-  }
-  html:not([data-theme="dark"]) .login-wordmark { color: #111111; }
+  [data-theme="dark"] .login-logo { filter: drop-shadow(0 2px 20px rgba(115,1,140,0.3)) brightness(1.08); }
   .login-tagline {
     font-size: 13px; font-weight: 400;
     color: #484848; letter-spacing: 0.03em;
@@ -457,6 +447,11 @@
     animation: loginEntrance 0.52s cubic-bezier(0.22, 1, 0.36, 1) 0.10s both;
   }
   html:not([data-theme="dark"]) .login-footer { color: #C5C5C5; }
+  .header-logo {
+    height: 26px; width: auto; display: block;
+    opacity: 0.9; margin-bottom: 6px;
+    filter: brightness(0) invert(1);
+  }
   /* Header logout (app pages) */
   .header-user { display:flex; align-items:center; gap:8px; }
   .header-user-name { font-size:11px; color:rgba(255,255,255,0.70); max-width:100px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
@@ -627,7 +622,7 @@
 
     let html = '<div class="header">';
     html += '<div class="header-left">';
-    html += '<div class="header-tag">AS CONSTRUCTION</div>';
+    html += '<img src="LOGO%20AS%20.png" class="header-logo" alt="AS Construction" onerror="this.style.display=\'none\'">';
     html += '<div class="header-title">Controle de Obras</div>';
     html += '<div class="header-sub">' + estado.obras.length + ' obra(s) cadastrada(s)</div>';
     html += '</div>';
@@ -703,7 +698,7 @@
     const status = getStatusInfo(obra.status);
     let html = '<div class="header">';
     html += '<div class="header-left">';
-    html += '<div class="header-tag">' + (obra.cliente ? escapeHtml(obra.cliente).toUpperCase() : 'AS CONSTRUCTION') + '</div>';
+    html += '<img src="LOGO%20AS%20.png" class="header-logo" alt="AS Construction" onerror="this.style.display=\'none\'">';
     html += '<div class="header-title obra-title">' + escapeHtml(obra.nome) + '</div>';
     html += '<div class="header-sub">Contrato: ' + brl(obra.contrato || 0) + ' | ' + status.nome + '</div>';
     html += '</div>';
@@ -1172,7 +1167,7 @@
     const dadosJSON = JSON.stringify(estado, null, 2);
     let html = '<div class="header">';
     html += '<div class="header-left">';
-    html += '<div class="header-tag">AS CONSTRUCTION</div>';
+    html += '<img src="LOGO%20AS%20.png" class="header-logo" alt="AS Construction" onerror="this.style.display=\'none\'">';
     html += '<div class="header-title">Backup / Restaurar</div>';
     html += '</div>';
     html += '<button class="btn-back" onclick="voltarHome()">← Voltar</button>';
@@ -1880,7 +1875,7 @@
   function renderPainel() {
     let html = '<div class="header">';
     html += '<div class="header-left">';
-    html += '<div class="header-tag">AS CONSTRUCTION</div>';
+    html += '<img src="LOGO%20AS%20.png" class="header-logo" alt="AS Construction" onerror="this.style.display=\'none\'">';
     html += '<div class="header-title obra-title">Painel Comparativo</div>';
     html += '</div>';
     html += '<div style="display:flex;gap:8px;align-items:center;flex-shrink:0;">';
@@ -2196,15 +2191,23 @@
     const mesNome = mesNomes[mesNum - 1] || '';
     const periodoLabel = (relatorioQuinzena === 1 ? '1ª Quinzena' : '2ª Quinzena') + ' — ' + mesNome + '/' + ano;
 
-    doc.setFillColor(115, 1, 140);
-    doc.rect(0, 0, PW, 28, 'F');
-    doc.setTextColor(255, 255, 255);
-    doc.setFontSize(16); doc.setFont('helvetica', 'bold');
-    doc.text('AS CONSTRUCTION', ML, 11);
-    doc.setFontSize(9); doc.setFont('helvetica', 'normal');
-    doc.text('Relatório de Empreitadas', ML, 18);
+    const _addPDFLogoHeader = (subtitle) => {
+      if (window._logoImg && window._logoImg.complete && window._logoImg.naturalWidth > 0) {
+        const lh = 16; const lw = lh * (window._logoImg.naturalWidth / window._logoImg.naturalHeight);
+        doc.addImage(window._logoImg, 'PNG', ML, 3, lw, lh);
+      }
+      doc.setFillColor(115, 1, 140);
+      doc.rect(0, 22, PW, 20, 'F');
+      doc.setTextColor(255, 255, 255);
+      doc.setFontSize(13); doc.setFont('helvetica', 'bold');
+      doc.text('AS CONSTRUCTION', ML, 31);
+      doc.setFontSize(9); doc.setFont('helvetica', 'normal');
+      doc.text(subtitle, ML, 37);
+    };
 
-    let y = 36;
+    _addPDFLogoHeader('Relatório de Empreitadas');
+
+    let y = 50;
     doc.setTextColor(80, 80, 80); doc.setFontSize(9); doc.setFont('helvetica', 'normal');
     doc.text('Obra: ', ML, y); doc.setTextColor(30, 30, 30); doc.setFont('helvetica', 'bold');
     doc.text(obra.nome, ML + 11, y); y += 6;
@@ -2224,10 +2227,8 @@
         doc.setTextColor(180, 180, 180); doc.setFontSize(8); doc.setFont('helvetica', 'normal');
         doc.text('Gerado em ' + dateBR(hojeISO()) + ' — AS Construction', ML, PH - 8);
         doc.addPage();
-        doc.setFillColor(115, 1, 140); doc.rect(0, 0, PW, 28, 'F');
-        doc.setTextColor(255, 255, 255); doc.setFontSize(16); doc.setFont('helvetica', 'bold');
-        doc.text('AS CONSTRUCTION', ML, 11);
-        y = 36;
+        _addPDFLogoHeader('Relatório de Empreitadas');
+        y = 50;
       }
     };
 
@@ -2287,14 +2288,18 @@
     const PW = 210; const PH = 297;
     const ML = 15; const MR = 15; const CW = PW - ML - MR;
 
-    doc.setFillColor(115, 1, 140); doc.rect(0, 0, PW, 28, 'F');
+    if (window._logoImg && window._logoImg.complete && window._logoImg.naturalWidth > 0) {
+      const lh = 16; const lw = lh * (window._logoImg.naturalWidth / window._logoImg.naturalHeight);
+      doc.addImage(window._logoImg, 'PNG', ML, 3, lw, lh);
+    }
+    doc.setFillColor(115, 1, 140); doc.rect(0, 22, PW, 20, 'F');
     doc.setTextColor(255, 255, 255);
-    doc.setFontSize(16); doc.setFont('helvetica', 'bold');
-    doc.text('AS CONSTRUCTION', ML, 11);
+    doc.setFontSize(13); doc.setFont('helvetica', 'bold');
+    doc.text('AS CONSTRUCTION', ML, 31);
     doc.setFontSize(9); doc.setFont('helvetica', 'normal');
-    doc.text('Relatório de Empreitada', ML, 18);
+    doc.text('Relatório de Empreitada', ML, 37);
 
-    let y = 36;
+    let y = 50;
     doc.setTextColor(80, 80, 80); doc.setFontSize(9); doc.setFont('helvetica', 'normal');
     doc.text('Obra: ', ML, y); doc.setTextColor(30, 30, 30); doc.setFont('helvetica', 'bold');
     doc.text(obra.nome, ML + 11, y); y += 6;
@@ -2383,15 +2388,19 @@
 
     let pageNum = 1;
     const addHeader = () => {
+      if (window._logoImg && window._logoImg.complete && window._logoImg.naturalWidth > 0) {
+        const lh = 16; const lw = lh * (window._logoImg.naturalWidth / window._logoImg.naturalHeight);
+        doc.addImage(window._logoImg, 'PNG', ML, 3, lw, lh);
+      }
       doc.setFillColor(115, 1, 140);
-      doc.rect(0, 0, PW, 28, 'F');
+      doc.rect(0, 22, PW, 20, 'F');
       doc.setTextColor(255, 255, 255);
-      doc.setFontSize(16); doc.setFont('helvetica', 'bold');
-      doc.text('AS CONSTRUCTION', ML, 11);
+      doc.setFontSize(13); doc.setFont('helvetica', 'bold');
+      doc.text('AS CONSTRUCTION', ML, 31);
       doc.setFontSize(9); doc.setFont('helvetica', 'normal');
-      doc.text('Relatório de Pagamento', ML, 18);
+      doc.text('Relatório de Pagamento', ML, 37);
       doc.setFontSize(8);
-      doc.text('Pág. ' + pageNum, PW - MR, 18, { align: 'right' });
+      doc.text('Pág. ' + pageNum, PW - MR, 37, { align: 'right' });
     };
 
     const addFooter = () => {
@@ -2401,7 +2410,7 @@
     };
 
     addHeader();
-    let y = 36;
+    let y = 50;
 
     // Info block
     doc.setTextColor(80, 80, 80);
@@ -2427,7 +2436,7 @@
     const checkPage = (needed) => {
       if (y + needed > PH - 20) {
         addFooter(); doc.addPage(); pageNum++;
-        addHeader(); y = 36;
+        addHeader(); y = 50;
       }
     };
 
@@ -2704,7 +2713,7 @@
   function renderCalculadora() {
     let html = '<div class="header">';
     html += '<div class="header-left">';
-    html += '<div class="header-tag">AS CONSTRUCTION</div>';
+    html += '<img src="LOGO%20AS%20.png" class="header-logo" alt="AS Construction" onerror="this.style.display=\'none\'">';
     html += '<div class="header-title obra-title">Calculadora de Orçamento</div>';
     html += '</div>';
     html += '<button class="btn-theme" onclick="toggleTema()" title="Alternar tema">' + (temaEscuro ? '☀' : '◑') + '</button>';
@@ -2881,10 +2890,7 @@
     return '<div class="login-page">'
       + '<button class="btn-theme login-theme-btn" onclick="toggleTema()" title="Alternar tema">' + toggleIcon + '</button>'
       + '<div class="login-content">'
-      +   '<div class="login-mark">'
-      +     '<span class="login-as">AS</span>'
-      +     '<span class="login-wordmark">Construction</span>'
-      +   '</div>'
+      +   '<img src="LOGO%20AS%20.png" class="login-logo" alt="AS Construction" onerror="this.style.display=\'none\'">'
       +   '<p class="login-tagline">Engenharia industrial de precisão</p>'
       +   '<button class="btn-google" id="btn-login-google" onclick="entrarComGoogle()">'
       +     googleSVG + 'Entrar com Google'
@@ -3026,6 +3032,10 @@
   }
 
   inicializarAtmosphera();
+
+  // Preload logo for PDF use
+  window._logoImg = new Image();
+  window._logoImg.src = 'LOGO%20AS%20.png';
 
   document.getElementById('root').innerHTML =
     '<div style="display:flex;align-items:center;justify-content:center;height:80vh;color:var(--ink-3);font-size:15px;font-family:-apple-system,sans-serif;">Carregando...</div>';
