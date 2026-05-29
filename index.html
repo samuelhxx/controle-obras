@@ -88,7 +88,7 @@
 
   .btn-primary { width: 100%; background: var(--purple); color: #fff; border: none; padding: 15px 20px; border-radius: var(--radius-btn); font-size: 15px; font-weight: 600; cursor: pointer; margin-top: 12px; font-family: inherit; transition: background 0.2s var(--ease), transform 0.15s var(--ease), box-shadow 0.2s ease; }
   .btn-danger { width: 100%; background: transparent; color: var(--red); border: 1.5px solid rgba(220,38,38,0.3); padding: 12px; border-radius: var(--radius-btn); font-size: 13px; cursor: pointer; font-weight: 600; margin-top: 10px; font-family: inherit; transition: background 0.15s ease; }
-  .btn-secondary { width: 100%; background: transparent; color: var(--purple); border: 1.5px solid rgba(115,1,140,0.25); padding: 14px 20px; border-radius: var(--radius-btn); font-size: 15px; font-weight: 600; cursor: pointer; margin-top: 12px; font-family: inherit; transition: background 0.2s var(--ease); }
+  .btn-secondary { width: 100%; background: transparent; color: var(--purple); border: 1.5px solid rgba(115,1,140,0.25); padding: 14px 20px; border-radius: var(--radius-btn); font-size: 15px; font-weight: 600; cursor: pointer; margin-top: 12px; font-family: inherit; transition: background 0.2s var(--ease), transform 0.15s var(--ease); }
 
   .lancamento { display: flex; justify-content: space-between; align-items: center; padding: 12px 0; border-bottom: 1px solid rgba(0,0,0,0.05); }
   .lanc-desc { font-size: 14px; font-weight: 600; color: var(--ink); }
@@ -319,6 +319,47 @@
   .rel-marmita-line { font-size:12px; color:var(--ink-3); margin-top:8px; display:flex; justify-content:space-between; padding:0 2px; }
   [data-theme="dark"] .rel-total-dinheiro { background:rgba(115,1,140,0.12); }
   [data-theme="dark"] .rel-quinzena-pill { background:#1C1C1E; border-color:rgba(255,255,255,0.10); }
+
+  /* ─── Microinterações ─── */
+  .btn-primary:active,
+  .btn-secondary:active,
+  .btn-danger:active,
+  .btn-mini:active,
+  .btn-pago:active,
+  .btn-toggle:active,
+  .btn-back:active,
+  .btn-logout:active,
+  .btn-theme:active { transform: scale(0.96); }
+
+  @keyframes slideInItem {
+    from { opacity: 0; transform: translateX(-8px); }
+    to   { opacity: 1; transform: translateX(0); }
+  }
+  .lancamento { animation: slideInItem 0.2s var(--ease) both; }
+  .equipe-item { animation: slideInItem 0.2s var(--ease) both; }
+
+  @keyframes toastIn {
+    from { opacity: 0; transform: translateX(-50%) translateY(10px); }
+    to   { opacity: 1; transform: translateX(-50%) translateY(0); }
+  }
+  .toast-notif {
+    position: fixed; bottom: 28px; left: 50%; transform: translateX(-50%);
+    background: rgba(25, 25, 25, 0.92); color: #fff;
+    font-size: 13px; font-weight: 500; padding: 10px 22px;
+    border-radius: 100px; z-index: 9999;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+    font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+    animation: toastIn 0.22s var(--ease) both;
+    white-space: nowrap; pointer-events: none;
+    backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+      animation-duration: 0.01ms !important;
+      transition-duration: 0.01ms !important;
+    }
+  }
 
   /* ─── Login Screen ─── */
   .login-page {
@@ -598,10 +639,10 @@
       html += '<div class="card" style="margin-top: 16px;"><div class="empty">Nenhuma obra cadastrada ainda.<br>Clique em "Adicionar Nova Obra" para começar.</div></div>';
     } else {
       html += '<div class="obras-grid">';
-      estado.obras.forEach(o => {
+      estado.obras.forEach((o, idx) => {
         const c = calcularObra(o);
         const status = getStatusInfo(o.status);
-        html += '<div class="obra-card" onclick="abrirObra(\'' + o.id + '\')">';
+        html += '<div class="obra-card" onclick="abrirObra(\'' + o.id + '\')" style="animation-delay:' + (idx * 40) + 'ms">';
         html += '<div class="obra-header-row">';
         html += '<div style="flex:1; min-width:0;"><div class="obra-nome">' + escapeHtml(o.nome) + '</div>';
         if (o.cliente) html += '<div class="obra-cliente">' + escapeHtml(o.cliente) + '</div>';
@@ -1243,6 +1284,7 @@
     selecaoDiaria = {};
     salvar();
     render();
+    toast('Diária lançada');
   }
 
   function removerDiaria(id) {
@@ -1268,6 +1310,7 @@
     });
     salvar();
     render();
+    toast('Gasto registrado');
   }
 
   function removerAvulso(id) {
@@ -1292,6 +1335,7 @@
     });
     salvar();
     render();
+    toast('Recebimento registrado');
   }
 
   function removerRecebimento(id) {
@@ -1317,6 +1361,7 @@
     });
     salvar();
     render();
+    toast('Empreitada adicionada');
   }
 
   function toggleEmpPago(id) {
@@ -1352,6 +1397,7 @@
     });
     salvar();
     render();
+    toast('Trabalhador adicionado');
   }
 
   function removerTrabalhador(id) {
@@ -1368,15 +1414,15 @@
     if (v < 0) { alert('Valor inválido.'); return; }
     obra.valorMarmita = v;
     salvar();
-    alert('Valor da marmita salvo: ' + brl(v));
     render();
+    toast('Marmita: ' + brl(v) + ' salvo');
   }
 
   function salvarNota() {
     const obra = getObra(obraAtualId);
     obra.nota = document.getElementById('nota-obra').value;
     salvar();
-    alert('Anotações salvas.');
+    toast('Anotações salvas');
   }
 
   function salvarEdicaoObra() {
@@ -1393,8 +1439,8 @@
     obra.dataInicio = document.getElementById('ed-inicio').value;
     obra.dataPrevisao = document.getElementById('ed-previsao').value;
     salvar();
-    alert('Alterações salvas.');
     render();
+    toast('Alterações salvas');
   }
 
   function excluirObra() {
@@ -1782,11 +1828,27 @@
 
     html += '<label class="field-label">Trabalhador / Tipo</label>';
     html += '<select id="rel-trab" onchange="atualizarPreviewRelatorio()">';
+    const _trabsRel = obra.trabalhadores || [];
+    const _empsRel  = obra.empreitadas  || [];
+    if (_trabsRel.length > 0) {
+      html += '<optgroup label="── Diaristas ──">';
+      _trabsRel.forEach(t => {
+        html += '<option value="' + t.id + '"' + (relatorioTrabId === t.id ? ' selected' : '') + '>' + escapeHtml(t.nome) + '</option>';
+      });
+      html += '</optgroup>';
+    }
+    if (_empsRel.length > 0) {
+      html += '<optgroup label="── Empreitadas ──">';
+      _empsRel.forEach(e => {
+        const empVal = 'emp:' + e.id;
+        html += '<option value="' + empVal + '"' + (relatorioTrabId === empVal ? ' selected' : '') + '>' + escapeHtml(e.nome) + '</option>';
+      });
+      html += '</optgroup>';
+    }
+    html += '<optgroup label="── Todos ──">';
     html += '<option value="todos"' + (relatorioTrabId === 'todos' ? ' selected' : '') + '>Todos os diaristas</option>';
-    html += '<option value="empreitadas"' + (relatorioTrabId === 'empreitadas' ? ' selected' : '') + '>── Empreitadas da Obra ──</option>';
-    (obra.trabalhadores || []).forEach(t => {
-      html += '<option value="' + t.id + '"' + (relatorioTrabId === t.id ? ' selected' : '') + '>' + escapeHtml(t.nome) + '</option>';
-    });
+    html += '<option value="empreitadas"' + (relatorioTrabId === 'empreitadas' ? ' selected' : '') + '>Todas as empreitadas</option>';
+    html += '</optgroup>';
     html += '</select>';
 
     html += '<button class="btn-secondary rel-pdf-btn" style="margin-top:16px;" onclick="gerarPDFRelatorio()">Exportar PDF</button>';
@@ -1850,8 +1912,34 @@
     return html;
   }
 
+  function _buildEmpreitadaUnicaPreviewHTML(obra, empId) {
+    const e = (obra.empreitadas || []).find(x => x.id === empId);
+    if (!e) return '<div class="empty">Empreitada não encontrada.</div>';
+    const statusCor = e.pago ? 'var(--green)' : 'var(--amber)';
+    const statusTxt = e.pago ? 'Pago' : 'A pagar';
+    let html = '<div class="card-title">EMPREITADA: ' + escapeHtml(e.nome).toUpperCase() + '</div>';
+    html += '<div class="lancamento">';
+    html += '<div><div class="lanc-desc">' + escapeHtml(e.nome) + '</div>';
+    if (Number(e.bonus || 0) > 0) {
+      const bonusCor = e.bonusPago ? 'var(--green)' : 'var(--ink-3)';
+      html += '<div class="lanc-data">Bônus: ' + brl(e.bonus) + ' — <span style="color:' + bonusCor + ';">' + (e.bonusPago ? 'Pago' : 'A pagar') + '</span></div>';
+    }
+    html += '</div>';
+    html += '<div class="lanc-right"><div><div class="lanc-valor">' + brl(e.valor) + '</div>';
+    html += '<div style="font-size:11px;font-weight:600;color:' + statusCor + ';text-align:right;margin-top:2px;">' + statusTxt + '</div></div></div></div>';
+    const totalPago = (e.pago ? Number(e.valor || 0) : 0) + (e.bonusPago ? Number(e.bonus || 0) : 0);
+    const totalAPagar = (!e.pago ? Number(e.valor || 0) : 0) + (Number(e.bonus || 0) > 0 && !e.bonusPago ? Number(e.bonus || 0) : 0);
+    html += '<div class="rel-total-dinheiro" style="margin-top:12px;">';
+    html += '<span class="rel-total-label">TOTAL PAGO</span><span class="rel-total-valor">' + brl(totalPago) + '</span></div>';
+    if (totalAPagar > 0) {
+      html += '<div class="rel-marmita-line"><span>A pagar</span><span>' + brl(totalAPagar) + '</span></div>';
+    }
+    return html;
+  }
+
   function buildRelatorioHTML(obra, mes, quinzena, trabId) {
     if (trabId === 'empreitadas') return _buildEmpreitadasPreviewHTML(obra);
+    if (typeof trabId === 'string' && trabId.startsWith('emp:')) return _buildEmpreitadaUnicaPreviewHTML(obra, trabId.slice(4));
     if (!mes) return '<div class="empty">Selecione um mês.</div>';
     const parts = mes.split('-');
     const ano = parseInt(parts[0]);
@@ -2054,8 +2142,78 @@
     doc.save('relatorio-empreitadas-' + relatorioMes + '-Q' + relatorioQuinzena + '.pdf');
   }
 
+  function _gerarPDFEmpreitadaUnica(obra, empId) {
+    const e = (obra.empreitadas || []).find(x => x.id === empId);
+    if (!e) return;
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF({ unit: 'mm', format: 'a4' });
+    const PW = 210; const PH = 297;
+    const ML = 15; const MR = 15; const CW = PW - ML - MR;
+
+    doc.setFillColor(115, 1, 140); doc.rect(0, 0, PW, 28, 'F');
+    doc.setTextColor(255, 255, 255);
+    doc.setFontSize(16); doc.setFont('helvetica', 'bold');
+    doc.text('AS CONSTRUCTION', ML, 11);
+    doc.setFontSize(9); doc.setFont('helvetica', 'normal');
+    doc.text('Relatório de Empreitada', ML, 18);
+
+    let y = 36;
+    doc.setTextColor(80, 80, 80); doc.setFontSize(9); doc.setFont('helvetica', 'normal');
+    doc.text('Obra: ', ML, y); doc.setTextColor(30, 30, 30); doc.setFont('helvetica', 'bold');
+    doc.text(obra.nome, ML + 11, y); y += 6;
+    doc.setTextColor(80, 80, 80); doc.setFont('helvetica', 'normal');
+    doc.text('Empreiteiro: ', ML, y); doc.setTextColor(30, 30, 30); doc.setFont('helvetica', 'bold');
+    doc.text(e.nome, ML + 25, y); y += 12;
+
+    doc.setDrawColor(220, 220, 220); doc.line(ML, y - 4, PW - MR, y - 4);
+    doc.setTextColor(100, 100, 100); doc.setFontSize(8); doc.setFont('helvetica', 'bold');
+    doc.text('DETALHES DA EMPREITADA', ML, y); y += 8;
+
+    doc.setFillColor(245, 245, 245); doc.rect(ML, y - 4, CW, 7, 'F');
+    doc.setTextColor(100, 100, 100); doc.setFontSize(8); doc.setFont('helvetica', 'bold');
+    doc.text('DESCRIÇÃO', ML + 1, y); doc.text('VALOR', ML + 100, y); doc.text('STATUS', PW - MR - 2, y, { align: 'right' });
+    y += 5; doc.setDrawColor(220, 220, 220); doc.line(ML, y - 2, PW - MR, y - 2);
+
+    doc.setTextColor(30, 30, 30); doc.setFontSize(9); doc.setFont('helvetica', 'bold');
+    doc.text(e.nome, ML + 1, y); doc.setFont('helvetica', 'normal');
+    doc.text(brl(e.valor), ML + 100, y);
+    const statusTxt = e.pago ? 'Pago' : 'A pagar';
+    doc.setTextColor(e.pago ? 5 : 180, e.pago ? 150 : 120, e.pago ? 105 : 0);
+    doc.text(statusTxt, PW - MR - 2, y, { align: 'right' });
+    y += 7;
+
+    let totalPago = e.pago ? Number(e.valor || 0) : 0;
+    let totalAPagar = !e.pago ? Number(e.valor || 0) : 0;
+
+    if (Number(e.bonus || 0) > 0) {
+      doc.setDrawColor(235, 235, 235); doc.line(ML, y - 2, PW - MR, y - 2);
+      doc.setTextColor(120, 120, 120); doc.setFontSize(8); doc.setFont('helvetica', 'normal');
+      doc.text('  Bônus: ' + brl(e.bonus) + ' — ' + (e.bonusPago ? 'Pago' : 'A pagar'), ML + 1, y);
+      if (e.bonusPago) totalPago += Number(e.bonus || 0); else totalAPagar += Number(e.bonus || 0);
+      y += 7;
+    }
+
+    y += 4;
+    doc.setFillColor(243, 229, 247); doc.rect(ML, y - 4, CW, 10, 'F');
+    doc.setTextColor(115, 1, 140); doc.setFontSize(10); doc.setFont('helvetica', 'bold');
+    doc.text('TOTAL PAGO', ML + 2, y + 1);
+    doc.text(brl(totalPago), PW - MR - 2, y + 1, { align: 'right' });
+    y += 12;
+    if (totalAPagar > 0) {
+      doc.setTextColor(120, 120, 120); doc.setFontSize(9); doc.setFont('helvetica', 'normal');
+      doc.text('A pagar:', ML + 2, y);
+      doc.text(brl(totalAPagar), PW - MR - 2, y, { align: 'right' });
+    }
+
+    doc.setTextColor(180, 180, 180); doc.setFontSize(8); doc.setFont('helvetica', 'normal');
+    doc.text('Gerado em ' + dateBR(hojeISO()) + ' — AS Construction', ML, PH - 8);
+    const nomeArq = e.nome.replace(/[^a-zA-Z0-9]/g, '-').toLowerCase().replace(/-+/g, '-');
+    doc.save('relatorio-empreitada-' + nomeArq + '.pdf');
+  }
+
   function _gerarPDF(obra) {
     if (relatorioTrabId === 'empreitadas') { _gerarPDFEmpreitadas(obra); return; }
+    if (typeof relatorioTrabId === 'string' && relatorioTrabId.startsWith('emp:')) { _gerarPDFEmpreitadaUnica(obra, relatorioTrabId.slice(4)); return; }
     const { jsPDF } = window.jspdf;
     const doc = new jsPDF({ unit: 'mm', format: 'a4' });
     const PW = 210; const PH = 297;
@@ -2342,6 +2500,7 @@
     orcamentos.push(orc);
     salvarOrcamentos();
     render();
+    toast('Orçamento salvo');
   }
 
   function excluirOrcamento(id) {
@@ -2544,6 +2703,19 @@
   }
 
   // ============ FIREBASE — Login + Nuvem ============
+
+  let _toastTimer = null;
+  function toast(msg) {
+    const existing = document.getElementById('_toast_notif');
+    if (existing) existing.remove();
+    const el = document.createElement('div');
+    el.id = '_toast_notif';
+    el.className = 'toast-notif';
+    el.textContent = msg;
+    document.body.appendChild(el);
+    clearTimeout(_toastTimer);
+    _toastTimer = setTimeout(() => { if (el.parentNode) el.remove(); }, 1800);
+  }
 
   let _avisoSyncTimer = null;
   function mostrarAvisoSync(msg) {
