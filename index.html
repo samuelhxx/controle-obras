@@ -516,6 +516,14 @@
     100% { box-shadow: 0 0 0 0 rgba(115,1,140,0); }
   }
   .highlight-pulse { animation: highlightPulse 1.8s ease 2; border-radius: 10px; }
+
+/* Aba Informações */
+.info-frente-item { display:flex; justify-content:space-between; align-items:flex-start; gap:10px; padding:10px 12px; border:1.5px solid rgba(0,0,0,0.08); border-radius:10px; margin-bottom:8px; }
+.info-frente-nome { font-size:13px; font-weight:600; color:var(--ink); }
+.info-frente-desc { font-size:12px; color:var(--ink-3); margin-top:2px; }
+[data-theme="dark"] .info-frente-item { border-color:rgba(255,255,255,0.08); }
+.relcli-info-link { display:inline-flex; align-items:center; gap:6px; font-size:12px; color:var(--purple); font-weight:600; cursor:pointer; margin-bottom:16px; text-decoration:none; }
+.relcli-info-link:hover { text-decoration:underline; }
 </style>
 </head>
 <body>
@@ -566,9 +574,7 @@
   let relatorioTrabId = 'todos';
   let recebimentoModo = 'recebido';
   let materialEditandoId = null;
-  let relClienteEscopo = '';
-  let relClienteMensagem = 'Foi uma honra atender vocês. A AS Construction permanece à disposição para futuras parcerias.';
-  let relClienteGarantia = 'Os serviços realizados possuem garantia de 2 anos e 6 meses a partir da data de entrega da obra.';
+
 
   function carregar() {
     try {
@@ -777,20 +783,21 @@
 
     html += '<div class="tabs">';
     const abas = [
-      ['resumo','Resumo'],
-      ['diarias','Diárias'],
-      ['avulsos','Gastos'],
-      ['empreitada','Empreitada'],
-      ['materiais','Materiais'],
+      ['resumo',      'Resumo'],
+      ['info',        'Informações'],
+      ['relcliente',  'Cliente'],
+      ['diarias',     'Diárias'],
+      ['avulsos',     'Gastos'],
+      ['empreitada',  'Empreitada'],
+      ['materiais',   'Materiais'],
       ['recebimentos','Recebimentos'],
-      ['historico','Histórico'],
-      ['grafico','Gráfico'],
-      ['equipe','Equipe'],
-      ['notas','Notas'],
-      ['editar','Editar'],
-      ['ia','IA'],
-      ['relatorio','Relatório'],
-      ['relcliente','Cliente']
+      ['historico',   'Histórico'],
+      ['grafico',     'Gráfico'],
+      ['equipe',      'Equipe'],
+      ['notas',       'Notas'],
+      ['editar',      'Editar'],
+      ['ia',          'IA'],
+      ['relatorio',   'Relatório']
     ];
     abas.forEach(a => {
       html += '<button class="tab ' + (abaAtual === a[0] ? 'active' : '') + '" onclick="trocarAba(\'' + a[0] + '\')">' + a[1] + '</button>';
@@ -811,10 +818,8 @@
     else if (abaAtual === 'ia') html += renderAbaIA(obra, c);
     else if (abaAtual === 'relatorio') html += renderAbaRelatorio(obra);
     else if (abaAtual === 'materiais') html += renderAbaMateriais(obra, c);
-    else if (abaAtual === 'relcliente') {
-      if (!relClienteEscopo && obra.nota) relClienteEscopo = obra.nota;
-      html += renderAbaRelatorioCliente(obra, c);
-    }
+    else if (abaAtual === 'info') html += renderAbaInfo(obra);
+    else if (abaAtual === 'relcliente') html += renderAbaRelatorioCliente(obra, c);
     html += '</div>';
 
     return html;
@@ -1803,7 +1808,14 @@
       }
     }
 
-    if (obra.nota) ctx += '\nANOTAÇÕES: ' + obra.nota.substring(0, 500) + '\n';
+    if (obra.nota) ctx += '\nANOTAÇOES: ' + obra.nota.substring(0, 500) + '\n';
+
+    const infoCtx = obra.info || {};
+    if (infoCtx.escopoDetalhado) ctx += '\nESCOPO DA OBRA:\n' + infoCtx.escopoDetalhado.substring(0, 400) + '\n';
+    if ((infoCtx.frentes || []).length > 0) {
+      ctx += '\nFRENTES DE TRABALHO:\n';
+      infoCtx.frentes.forEach(function(f) { ctx += '- ' + f.nome + (f.descricao ? ': ' + f.descricao : '') + '\n'; });
+    }
 
     const orcs = carregarOrcamentos();
     if (orcs.length > 0) {
@@ -3295,7 +3307,7 @@
     salvar();
     materialEditandoId = null;
     render();
-    showToast('Material adicionado!');
+    toast('Material adicionado!');
   }
 
   function editarMaterial(id) {
@@ -3330,7 +3342,7 @@
     salvar();
     materialEditandoId = null;
     render();
-    showToast('Material atualizado!');
+    toast('Material atualizado!');
   }
 
   function removerMaterial(id) {
@@ -3417,32 +3429,174 @@
 
   // ============ RELATÓRIO CLIENTE ============
 
+  function salvarInfoObra(obraId, campo, valor) {
+    const obra = getObra(obraId);
+    if (!obra) return;
+    if (!obra.info) obra.info = {};
+    obra.info[campo] = valor;
+    salvar();
+    toast('Salvo!');
+  }
+
+  function salvarBlocoInfo(obraId, campos) {
+    const obra = getObra(obraId);
+    if (!obra) return;
+    if (!obra.info) obra.info = {};
+    Object.keys(campos).forEach(function(k) { obra.info[k] = campos[k]; });
+    salvar();
+    toast('Dados salvos!');
+  }
+
+  function _salvarDadosClienteInfo() {
+    const obra = getObra(obraAtualId);
+    if (!obra) return;
+    if (!obra.info) obra.info = {};
+    obra.info.clienteRazaoSocial = (document.getElementById('info-razao') || {}).value || '';
+    obra.info.clienteCpfCnpj    = (document.getElementById('info-cpfcnpj') || {}).value || '';
+    obra.info.clienteEndereco   = (document.getElementById('info-endereco') || {}).value || '';
+    obra.info.clienteContato    = (document.getElementById('info-contato') || {}).value || '';
+    obra.info.clienteTelefone   = (document.getElementById('info-telefone') || {}).value || '';
+    obra.info.clienteEmail      = (document.getElementById('info-email') || {}).value || '';
+    salvar();
+    toast('Dados salvos!');
+  }
+
+  function _salvarEscopoInfo() {
+    salvarInfoObra(obraAtualId, 'escopoDetalhado', (document.getElementById('info-escopo') || {}).value || '');
+  }
+
+  function _salvarGarantiaInfo() {
+    salvarInfoObra(obraAtualId, 'garantia', (document.getElementById('info-garantia') || {}).value || '');
+  }
+
+  function adicionarFrenteTrabalho() {
+    const obra = getObra(obraAtualId);
+    if (!obra) return;
+    const nomeEl = document.getElementById('frente-nome');
+    const descEl = document.getElementById('frente-desc');
+    const nome = nomeEl ? nomeEl.value.trim() : '';
+    const desc = descEl ? descEl.value.trim() : '';
+    if (!nome) { toast('Informe o nome da frente de trabalho.'); return; }
+    if (!obra.info) obra.info = {};
+    if (!obra.info.frentes) obra.info.frentes = [];
+    obra.info.frentes.push({ id: 'frente_' + Date.now(), nome: nome, descricao: desc });
+    salvar();
+    abaAtual = 'info';
+    render();
+  }
+
+  function removerFrente(btn) {
+    const container = btn.closest('[data-id]');
+    if (!container) return;
+    const frenteId = container.getAttribute('data-id');
+    const obra = getObra(obraAtualId);
+    if (!obra || !obra.info) return;
+    obra.info.frentes = (obra.info.frentes || []).filter(function(f) { return f.id !== frenteId; });
+    salvar();
+    abaAtual = 'info';
+    render();
+  }
+
+  function renderAbaInfo(obra) {
+    const info = obra.info || {};
+    const frentes = info.frentes || [];
+    let html = '';
+
+    // Card Dados do Cliente
+    html += '<div class="card">';
+    html += '<div class="card-title">DADOS DO CLIENTE</div>';
+    html += '<label>Razão Social / Nome</label>';
+    html += '<input type="text" id="info-razao" placeholder="Nome completo ou razão social" value="' + escapeHtml(info.clienteRazaoSocial || '') + '">';
+    html += '<label style="margin-top:12px;">CPF ou CNPJ</label>';
+    html += '<input type="text" id="info-cpfcnpj" placeholder="XX.XXX.XXX/XXXX-XX ou CPF" value="' + escapeHtml(info.clienteCpfCnpj || '') + '">';
+    html += '<label style="margin-top:12px;">Endereço completo</label>';
+    html += '<input type="text" id="info-endereco" placeholder="Rua, número, bairro, cidade" value="' + escapeHtml(info.clienteEndereco || '') + '">';
+    html += '<label style="margin-top:12px;">Nome do contato / responsável</label>';
+    html += '<input type="text" id="info-contato" placeholder="Nome do responsável" value="' + escapeHtml(info.clienteContato || '') + '">';
+    html += '<label style="margin-top:12px;">Telefone</label>';
+    html += '<input type="tel" id="info-telefone" placeholder="(11) 9XXXX-XXXX" value="' + escapeHtml(info.clienteTelefone || '') + '">';
+    html += '<label style="margin-top:12px;">E-mail</label>';
+    html += '<input type="email" id="info-email" placeholder="email@exemplo.com" value="' + escapeHtml(info.clienteEmail || '') + '">';
+    html += '<button class="btn-primary" style="margin-top:16px;" onclick="_salvarDadosClienteInfo()">Salvar dados do cliente</button>';
+    html += '</div>';
+
+    // Card Escopo da Obra
+    html += '<div class="card">';
+    html += '<div class="card-title">ESCOPO DA OBRA</div>';
+    html += '<label>Descrição detalhada dos serviços realizados</label>';
+    html += '<textarea id="info-escopo" rows="8" placeholder="Descreva detalhadamente o escopo contratado e realizado...">' + escapeHtml(info.escopoDetalhado || '') + '</textarea>';
+    html += '<button class="btn-primary" style="margin-top:12px;" onclick="_salvarEscopoInfo()">Salvar escopo</button>';
+    html += '</div>';
+
+    // Card Frentes de Trabalho
+    html += '<div class="card">';
+    html += '<div class="card-title">FRENTES DE TRABALHO</div>';
+    if (frentes.length > 0) {
+      frentes.forEach(function(f) {
+        html += '<div class="info-frente-item" data-id="' + escapeHtml(f.id) + '">';
+        html += '<div><div class="info-frente-nome">' + escapeHtml(f.nome) + '</div>';
+        if (f.descricao) html += '<div class="info-frente-desc">' + escapeHtml(f.descricao) + '</div>';
+        html += '</div>';
+        html += '<button class="btn-secondary" style="padding:6px 12px;font-size:12px;margin-top:0;" onclick="removerFrente(this)">Remover</button>';
+        html += '</div>';
+      });
+    } else {
+      html += '<div style="font-size:13px;color:var(--ink-3);margin-bottom:16px;">Nenhuma frente cadastrada. Adicione abaixo.</div>';
+    }
+    html += '<div style="margin-top:16px;padding-top:16px;border-top:1px solid rgba(0,0,0,0.07);">';
+    html += '<label>Nome da frente</label>';
+    html += '<input type="text" id="frente-nome" placeholder="Ex: Equipe de Impermeabilização">';
+    html += '<label style="margin-top:12px;">Descrição</label>';
+    html += '<input type="text" id="frente-desc" placeholder="Ex: Recuperação e impermeabilização das piscinas">';
+    html += '<button class="btn-primary" style="margin-top:12px;" onclick="adicionarFrenteTrabalho()">+ Adicionar frente</button>';
+    html += '</div>';
+    html += '</div>';
+
+    // Card Garantia
+    html += '<div class="card">';
+    html += '<div class="card-title">GARANTIA</div>';
+    html += '<textarea id="info-garantia" rows="3">' + escapeHtml(info.garantia || 'Os serviços realizados possuem garantia de 2 anos e 6 meses a partir da data de entrega da obra.') + '</textarea>';
+    html += '<button class="btn-primary" style="margin-top:12px;" onclick="_salvarGarantiaInfo()">Salvar garantia</button>';
+    html += '</div>';
+
+    return html;
+  }
+
   function renderAbaRelatorioCliente(obra, c) {
+    const info = obra.info || {};
+    const escopo = info.escopoDetalhado || '';
+    const garantia = info.garantia || 'Os serviços realizados possuem garantia de 2 anos e 6 meses a partir da data de entrega da obra.';
+
     let html = '<div class="card">';
     html += '<div class="card-title">RELATÓRIO DE ENTREGA — PREVIEW</div>';
-    html += '<p style="font-size:13px;color:var(--ink-3);margin-bottom:20px;">Revise e edite o conteúdo antes de gerar o PDF. Este documento é para entrega ao cliente — não inclui custos, margens ou dados internos.</p>';
+    html += '<p style="font-size:13px;color:var(--ink-3);margin-bottom:8px;">Revise antes de gerar. Dados do cliente e escopo vêm da aba Informações.</p>';
+    html += '<span class="relcli-info-link" onclick="_irParaInfo()">↗ Editar na aba Informações</span>';
 
     html += '<div class="relcli-preview-label">Escopo realizado</div>';
-    html += '<textarea id="relcli-escopo" rows="6" placeholder="Descreva os serviços realizados na obra..." oninput="atualizarRelCli(\'escopo\',this.value)">' + escapeHtml(relClienteEscopo) + '</textarea>';
-
-    html += '<div class="relcli-preview-label" style="margin-top:18px;">Mensagem final ao cliente</div>';
-    html += '<textarea id="relcli-msg" rows="4" placeholder="Mensagem de encerramento..." oninput="atualizarRelCli(\'msg\',this.value)">' + escapeHtml(relClienteMensagem) + '</textarea>';
+    if (!escopo.trim()) {
+      html += '<div style="font-size:12px;color:var(--amber);margin-bottom:8px;padding:10px 12px;background:rgba(217,119,6,0.07);border-radius:8px;">Escopo vazio — preencha na aba Informações para aparecer no PDF.</div>';
+    }
+    html += '<textarea id="relcli-escopo" rows="6" placeholder="Descreva os serviços realizados..." oninput="_onEscopoChange(this.value)">' + escapeHtml(escopo) + '</textarea>';
 
     html += '<div class="relcli-preview-label" style="margin-top:18px;">Texto de garantia</div>';
-    html += '<textarea id="relcli-garantia" rows="3" placeholder="Texto da garantia dos serviços..." oninput="atualizarRelCli(\'garantia\',this.value)">' + escapeHtml(relClienteGarantia) + '</textarea>';
+    html += '<textarea id="relcli-garantia" rows="3" oninput="_onGarantiaChange(this.value)">' + escapeHtml(garantia) + '</textarea>';
 
     html += '<div style="margin-top:24px;border-top:1px solid rgba(0,0,0,0.08);padding-top:20px;">';
     html += '<button class="btn-primary" onclick="gerarRelatorioCliente()">Gerar PDF para o Cliente</button>';
-    html += '<p class="relcli-note">Documento para entrega ao cliente — não expõe valores de custo, diárias, margens ou dados internos da AS Construction.</p>';
+    html += '<p class="relcli-note">Documento para entrega ao cliente — não expõe custos, margens ou dados internos da AS Construction.</p>';
     html += '</div>';
     html += '</div>';
     return html;
   }
 
-  function atualizarRelCli(campo, val) {
-    if (campo === 'escopo')   relClienteEscopo    = val;
-    if (campo === 'msg')      relClienteMensagem  = val;
-    if (campo === 'garantia') relClienteGarantia  = val;
+  function _irParaInfo() { trocarAba('info'); }
+
+  function _onEscopoChange(val) {
+    salvarInfoObra(obraAtualId, 'escopoDetalhado', val);
+  }
+
+  function _onGarantiaChange(val) {
+    salvarInfoObra(obraAtualId, 'garantia', val);
   }
 
   function gerarRelatorioCliente() {
@@ -3480,14 +3634,15 @@
     const { jsPDF } = window.jspdf;
     const doc = new jsPDF({ unit: 'mm', format: 'a4' });
     const PW = 210, PH = 297, ML = 16, MR = 194;
+    const info = obra.info || {};
 
-    function addPageHeader(pageNum) {
+    function addPageHeader() {
       doc.setFillColor(115, 1, 140);
       doc.rect(0, 0, PW, 14, 'F');
       doc.setTextColor(255,255,255); doc.setFontSize(8); doc.setFont('helvetica', 'bold');
       doc.text('AS CONSTRUCTION', ML, 9);
       doc.setFont('helvetica', 'normal');
-      doc.text('Relatório de Entrega de Obra', MR, 9, { align: 'right' });
+      doc.text('Relatorio de Entrega de Obra', MR, 9, { align: 'right' });
     }
 
     function checkPage(y) {
@@ -3509,7 +3664,7 @@
       doc.setFont('helvetica', 'bold'); doc.setFontSize(8.5); doc.setTextColor(100,100,100);
       doc.text(label, ML, y);
       doc.setFont('helvetica', 'normal'); doc.setTextColor(30,30,30);
-      doc.text(value || 'Não informado', ML + 50, y);
+      doc.text(value || '', ML + 50, y);
       return y + 7;
     }
 
@@ -3534,11 +3689,12 @@
     doc.text('AS CONSTRUCTION', MR, 14, { align: 'right' });
 
     doc.setTextColor(30, 30, 30); doc.setFont('helvetica', 'normal'); doc.setFontSize(11);
-    doc.text('RELATÓRIO DE ENTREGA DE OBRA', PW/2, 62, { align: 'center' });
+    doc.text('RELATORIO DE ENTREGA DE OBRA', PW/2, 62, { align: 'center' });
     doc.setDrawColor(115,1,140); doc.line(ML, 65, MR, 65);
 
+    // Nome do cliente (razao social ou campo cliente)
+    const clienteNome = (info.clienteRazaoSocial || obra.cliente || 'Cliente').toUpperCase();
     doc.setFontSize(22); doc.setFont('helvetica', 'bold'); doc.setTextColor(20,20,20);
-    const clienteNome = (obra.cliente || 'Cliente').toUpperCase();
     const clienteLines = doc.splitTextToSize(clienteNome, MR - ML);
     let cy = 80;
     clienteLines.forEach(function(l) { doc.text(l, PW/2, cy, { align: 'center' }); cy += 10; });
@@ -3551,19 +3707,26 @@
     doc.text('Entregue em ' + dataEntrega, PW/2, cy + 16, { align: 'center' });
 
     doc.setFontSize(8); doc.setTextColor(180,180,180);
-    doc.text('AS Construction  ·  Página 1', PW/2, PH - 10, { align: 'center' });
+    doc.text('AS Construction  Pagina 1', PW/2, PH - 10, { align: 'center' });
 
     // ── CORPO ──
     doc.addPage();
     addPageHeader();
     let y = 22;
 
-    // 1. Dados do contrato
+    // 1. Dados do Contrato
     y = secTitle(y, '1. DADOS DO CONTRATO');
-    y = addField(y, 'Cliente:', obra.cliente || '');
+    const razaoSocial = info.clienteRazaoSocial || obra.cliente || '';
+    if (razaoSocial) y = addField(y, 'Cliente:', razaoSocial);
+    if (info.clienteCpfCnpj) y = addField(y, 'CPF/CNPJ:', info.clienteCpfCnpj);
+    if (info.clienteEndereco) y = addField(y, 'Endereco:', info.clienteEndereco);
+    if (info.clienteContato || info.clienteTelefone) {
+      const contato = [info.clienteContato, info.clienteTelefone].filter(Boolean).join('  ');
+      y = addField(y, 'Contato:', contato);
+    }
     if (obra.dataInicio || obra.dataPrevisao) {
-      const periodo = (obra.dataInicio ? dateBR(obra.dataInicio) : '—') + '  →  ' + (obra.dataPrevisao ? dateBR(obra.dataPrevisao) : '—');
-      y = addField(y, 'Período:', periodo);
+      const periodo = (obra.dataInicio ? dateBR(obra.dataInicio) : '-') + '  ate  ' + (obra.dataPrevisao ? dateBR(obra.dataPrevisao) : '-');
+      y = addField(y, 'Periodo:', periodo);
     }
     y = addField(y, 'Valor do contrato:', brl(obra.contrato || 0));
     y += 4;
@@ -3573,12 +3736,12 @@
       y = secTitle(y, '2. CRONOGRAMA EXECUTADO');
       const hoje = hojeISO();
       const previsto = obra.dataPrevisao || '';
-      const entregaReal = obra.status === 'concluida' ? (previsto || hoje) : hoje;
-      y = addField(y, 'Início:', obra.dataInicio ? dateBR(obra.dataInicio) : 'Não informado');
-      y = addField(y, 'Previsão de término:', previsto ? dateBR(previsto) : 'Não informado');
-      if (obra.status === 'concluida' && previsto) {
-        const diasDiff = Math.round((new Date(entregaReal + 'T12:00:00') - new Date(previsto + 'T12:00:00')) / 86400000);
-        const indicador = diasDiff <= 0 ? 'Prazo cumprido' : 'Concluída com ' + diasDiff + ' dia(s) de atraso';
+      y = addField(y, 'Inicio:', obra.dataInicio ? dateBR(obra.dataInicio) : 'Nao informado');
+      y = addField(y, 'Previsao de termino:', previsto ? dateBR(previsto) : 'Nao informado');
+      if (previsto) {
+        const entregaRef = obra.status === 'concluida' ? previsto : hoje;
+        const diasDiff = Math.round((new Date(entregaRef + 'T12:00:00') - new Date(previsto + 'T12:00:00')) / 86400000);
+        const indicador = diasDiff <= 0 ? 'Prazo cumprido' : 'Concluida com ' + diasDiff + ' dia(s) de atraso';
         y = checkPage(y); doc.setFont('helvetica', 'bold'); doc.setFontSize(8.5);
         doc.setTextColor(diasDiff <= 0 ? 5 : 180, diasDiff <= 0 ? 150 : 50, diasDiff <= 0 ? 105 : 6);
         doc.text(indicador, ML, y); doc.setTextColor(0,0,0); doc.setFont('helvetica','normal');
@@ -3588,42 +3751,50 @@
     }
 
     // 3. Escopo realizado
-    if (relClienteEscopo.trim()) {
+    const escopoText = info.escopoDetalhado || '';
+    if (escopoText.trim()) {
       y = secTitle(y, '3. ESCOPO REALIZADO');
       doc.setFontSize(9);
-      y = addText(y, relClienteEscopo.trim());
+      y = addText(y, escopoText.trim());
       y += 4;
     }
 
-    // 4. Equipe envolvida
-    const totalDias = (obra.diarias || []).length;
-    const empreitadas = (obra.empreitadas || []).map(function(e) { return e.nome; }).filter(Boolean);
-    if (totalDias > 0 || empreitadas.length > 0) {
-      y = secTitle(y, '4. EQUIPE ENVOLVIDA');
-      if (totalDias > 0) { y = addField(y, 'Total de diárias registradas:', totalDias + ' dia(s)'); }
-      if (empreitadas.length > 0) {
-        y = checkPage(y); doc.setFont('helvetica','bold'); doc.setFontSize(8.5); doc.setTextColor(100,100,100);
-        doc.text('Empreiteiros:', ML, y); y += 6; doc.setFont('helvetica','normal'); doc.setTextColor(30,30,30);
-        empreitadas.forEach(function(nome) { y = checkPage(y); doc.text('· ' + nome, ML + 4, y); y += 5.5; });
-      }
-      y += 4;
+    // 4. Equipes de Execucao (apenas frentes de trabalho - NUNCA empreiteiros)
+    const frentes = info.frentes || [];
+    let secNum = escopoText.trim() ? 4 : 3;
+    if (frentes.length > 0) {
+      y = secTitle(y, secNum + '. EQUIPES DE EXECUCAO');
+      doc.setFontSize(9);
+      frentes.forEach(function(f) {
+        y = checkPage(y);
+        doc.setFont('helvetica', 'bold'); doc.setTextColor(30,30,30);
+        doc.text(f.nome || '', ML + 2, y); y += 5.5;
+        if (f.descricao) {
+          doc.setFont('helvetica', 'normal'); doc.setTextColor(80,80,80);
+          y = addText(y, f.descricao, MR - ML - 4);
+        }
+        y += 2;
+      });
+      y += 2;
+      secNum++;
     }
 
     // 5. Materiais utilizados (sem valores)
     const mats = obra.materiais || [];
     if (mats.length > 0) {
-      y = secTitle(y, '5. MATERIAIS UTILIZADOS');
-      doc.setFontSize(9);
+      y = secTitle(y, secNum + '. MATERIAIS UTILIZADOS');
+      doc.setFontSize(9); doc.setFont('helvetica', 'normal'); doc.setTextColor(30,30,30);
       mats.forEach(function(m) {
         y = checkPage(y);
-        doc.text('· ' + m.nome + '   ' + m.quantidade + ' ' + m.unidade, ML + 2, y);
+        doc.text(m.nome + '   ' + m.quantidade + ' ' + m.unidade, ML + 2, y);
         y += 5.5;
       });
       y += 4;
+      secNum++;
     }
 
     // 6. Resumo financeiro do cliente
-    y = secTitle(y, (mats.length > 0 ? '6' : '5') + '. RESUMO FINANCEIRO');
+    y = secTitle(y, secNum + '. RESUMO FINANCEIRO');
     y = addField(y, 'Valor do contrato:', brl(obra.contrato || 0));
     const recbEfetuados = (obra.recebimentos || []).filter(function(r) { return r.previsto !== true; });
     if (recbEfetuados.length > 0) {
@@ -3632,7 +3803,7 @@
       doc.setFont('helvetica','normal'); doc.setTextColor(30,30,30);
       recbEfetuados.forEach(function(r) {
         y = checkPage(y);
-        const label = (r.data ? dateBR(r.data) + '  ' : '') + escapeHtml(r.descricao || 'Recebimento');
+        const label = (r.data ? dateBR(r.data) + '  ' : '') + (r.descricao || 'Recebimento');
         doc.text(label, ML + 4, y);
         doc.text(brl(r.valor || 0), MR, y, { align: 'right' });
         y += 5.5;
@@ -3644,18 +3815,19 @@
       y += 7;
     }
     const c2 = calcularObra(obra);
-    const situacao = c2.saldoReceber <= 0 ? 'Quitado' : 'Saldo pendente: ' + brl(c2.saldoReceber);
     y = addField(y, 'Total recebido:', brl(c2.totalRecebido));
+    const situacao = c2.saldoReceber <= 0 ? 'Quitado' : 'Saldo pendente: ' + brl(c2.saldoReceber);
     y = checkPage(y); doc.setFont('helvetica','bold'); doc.setFontSize(8.5);
     doc.setTextColor(c2.saldoReceber <= 0 ? 5 : 180, c2.saldoReceber <= 0 ? 150 : 50, c2.saldoReceber <= 0 ? 105 : 6);
     doc.text(situacao, ML, y); doc.setTextColor(0,0,0); doc.setFont('helvetica','normal');
     y += 10;
+    secNum++;
 
     // 7. Garantia
-    const numSec = mats.length > 0 ? 7 : 6;
-    y = secTitle(y, numSec + '. GARANTIA');
-    doc.setFontSize(9);
-    y = addText(y, relClienteGarantia.trim() || 'Garantia de 2 anos e 6 meses a partir da entrega.');
+    const garantiaText = info.garantia || 'Os servicos realizados possuem garantia de 2 anos e 6 meses a partir da data de entrega da obra.';
+    y = secTitle(y, secNum + '. GARANTIA');
+    doc.setFontSize(9); doc.setFont('helvetica','normal');
+    y = addText(y, garantiaText.trim());
     if (obra.dataPrevisao) {
       const dataEntrega2 = new Date(obra.dataPrevisao + 'T12:00:00');
       dataEntrega2.setMonth(dataEntrega2.getMonth() + 30);
@@ -3665,30 +3837,33 @@
       y += 8;
     }
     y += 2;
+    secNum++;
 
     // 8. Encerramento
-    y = secTitle(y, (numSec + 1) + '. ENCERRAMENTO');
+    const mensagemFinal = 'Foi uma honra atender voces. A AS Construction permanece a disposicao para futuras parcerias.';
+    y = secTitle(y, secNum + '. ENCERRAMENTO');
     doc.setFontSize(9); doc.setFont('helvetica', 'italic');
-    y = addText(y, '"' + (relClienteMensagem.trim() || '') + '"');
+    y = addText(y, '"' + mensagemFinal + '"');
     doc.setFont('helvetica', 'normal');
     y += 6;
     y = checkPage(y);
     doc.setFont('helvetica', 'bold'); doc.setFontSize(9); doc.setTextColor(115,1,140);
     doc.text('AS Construction', MR, y, { align: 'right' });
 
-    // Rodapé em todas as páginas
+    // Rodape em todas as paginas
     const totalPag = doc.getNumberOfPages();
     for (let p = 1; p <= totalPag; p++) {
       doc.setPage(p);
       doc.setFillColor(245,240,250); doc.rect(0, PH - 12, PW, 12, 'F');
       doc.setTextColor(150,100,170); doc.setFontSize(7.5); doc.setFont('helvetica', 'normal');
-      doc.text('AS Construction  ·  Relatório de Entrega de Obra  ·  ' + new Date().toLocaleDateString('pt-BR'), PW/2, PH - 4, { align: 'center' });
+      doc.text('AS Construction  Relatorio de Entrega de Obra  ' + new Date().toLocaleDateString('pt-BR'), PW/2, PH - 4, { align: 'center' });
     }
 
     const slug = (obra.nome || 'obra').toLowerCase().replace(/[^a-z0-9]/g, '-').replace(/-+/g,'-');
     doc.save('relatorio-cliente-' + slug + '.pdf');
-    showToast('PDF gerado!');
+    toast('PDF gerado!');
   }
+
 
   // INIT - Pré-cadastra Atmosphera apenas se não houver nenhuma obra
   function inicializarAtmosphera() {
