@@ -361,6 +361,29 @@
     }
   }
 
+  /* ─── Recebimentos Previstos ─── */
+  .receb-form-pills { display: flex; gap: 6px; margin: 0 0 16px; }
+  .receb-form-pill { flex: 1; padding: 10px; border-radius: 100px; border: 1.5px solid rgba(0,0,0,0.10); background: var(--bg); color: var(--ink-3); font-size: 13px; font-weight: 500; cursor: pointer; font-family: inherit; text-align: center; transition: all 0.18s var(--ease); }
+  .receb-form-pill.active { background: var(--purple); color: #fff; border-color: var(--purple); font-weight: 600; }
+  [data-theme="dark"] .receb-form-pill { background: #1C1C1E; border-color: rgba(255,255,255,0.10); }
+
+  .receb-previsto-item { border: 1.5px solid rgba(0,0,0,0.08); border-radius: 12px; padding: 14px; margin-bottom: 10px; transition: border-color 0.2s ease; }
+  .receb-previsto-item.atrasado { border-color: rgba(220,38,38,0.4); background: rgba(220,38,38,0.03); animation: pulseRed 2.5s ease-in-out infinite; }
+  [data-theme="dark"] .receb-previsto-item { border-color: rgba(255,255,255,0.08); }
+  [data-theme="dark"] .receb-previsto-item.atrasado { background: rgba(220,38,38,0.07); }
+  .badge-atraso { font-size: 10px; font-weight: 700; color: var(--red); margin-top: 3px; display: inline-flex; align-items: center; gap: 3px; }
+  .badge-previsto { font-size: 10px; font-weight: 700; color: var(--purple); margin-top: 3px; }
+  @keyframes pulseRed {
+    0%, 100% { box-shadow: none; }
+    50% { box-shadow: 0 0 0 3px rgba(220,38,38,0.14); }
+  }
+  .btn-marcar-recebido { padding: 7px 14px; border-radius: 8px; font-size: 11px; font-weight: 700; cursor: pointer; background: var(--surface); color: var(--green); border: 1.5px solid rgba(5,150,105,0.3); font-family: inherit; flex-shrink: 0; transition: all 0.15s ease; white-space: nowrap; }
+  @media (hover: hover) { .btn-marcar-recebido:hover { background: rgba(5,150,105,0.07); } }
+  .btn-marcar-recebido:active { transform: scale(0.96); }
+  [data-theme="dark"] .btn-marcar-recebido { background: #2C2C2E; border-color: rgba(5,150,105,0.25); }
+  .receb-section-label { font-size: 10px; color: var(--ink-3); font-weight: 700; letter-spacing: 1.5px; text-transform: uppercase; margin: 16px 0 10px; }
+  .receb-section-label:first-child { margin-top: 4px; }
+
   /* ─── Login Screen ─── */
   .login-page {
     position: fixed; inset: 0;
@@ -487,6 +510,7 @@
   let relatorioMes = hojeISO().substring(0, 7);
   let relatorioQuinzena = new Date().getDate() <= 15 ? 1 : 2;
   let relatorioTrabId = 'todos';
+  let recebimentoModo = 'recebido';
 
   function carregar() {
     try {
@@ -560,7 +584,7 @@
     const imposto = Number(obra.contrato || 0) * (Number(obra.impostoPct || 0) / 100);
     const lucro = Number(obra.contrato || 0) - custoTotal - imposto;
     const margem = obra.contrato > 0 ? (lucro / obra.contrato) * 100 : 0;
-    const totalRecebido = (obra.recebimentos || []).reduce((s,r) => s + Number(r.valor || 0), 0);
+    const totalRecebido = (obra.recebimentos || []).filter(r => r.previsto !== true).reduce((s,r) => s + Number(r.valor || 0), 0);
     const saldoReceber = Number(obra.contrato || 0) - totalRecebido;
     return { totalDiarias, totalAvulsos, totalEmp, custoTotal, imposto, lucro, margem, totalRecebido, saldoReceber };
   }
@@ -900,34 +924,86 @@
   }
 
   function renderAbaRecebimentos(o, c) {
+    const hoje = hojeISO();
+    const previstos = (o.recebimentos || []).filter(r => r.previsto === true).sort((a,b) => a.dataPrevista.localeCompare(b.dataPrevista));
+    const recebidos = (o.recebimentos || []).filter(r => r.previsto !== true).sort((a,b) => b.data.localeCompare(a.data));
+
     let html = '<div class="two-col-layout"><div>';
+
     html += '<div class="card"><div class="card-title">REGISTRAR RECEBIMENTO</div>';
-    html += '<label class="field-label">Data</label><input type="date" id="receb-data">';
-    html += '<label class="field-label">Descrição</label><input type="text" id="receb-desc" placeholder="Ex.: Entrada 20% | 1ª parcela | Final">';
-    html += '<label class="field-label">Valor (R$)</label><input type="text" inputmode="decimal" id="receb-valor" placeholder="Ex.: 19200,00">';
-    html += '<button class="btn-primary" onclick="lancarRecebimento()">Registrar</button></div>';
+    html += '<div class="receb-form-pills">';
+    html += '<button class="receb-form-pill' + (recebimentoModo === 'recebido' ? ' active' : '') + '" onclick="setRecebimentoModo(\'recebido\')">✓ Recebido</button>';
+    html += '<button class="receb-form-pill' + (recebimentoModo === 'previsto' ? ' active' : '') + '" onclick="setRecebimentoModo(\'previsto\')">⏱ Previsto</button>';
+    html += '</div>';
+    html += '<label class="field-label" id="receb-date-label">' + (recebimentoModo === 'previsto' ? 'Data Prevista' : 'Data do Recebimento') + '</label>';
+    html += '<input type="date" id="receb-data">';
+    html += '<label class="field-label">Descrição</label>';
+    html += '<input type="text" id="receb-desc" placeholder="Ex.: Entrada 30% | 1ª parcela | Final">';
+    html += '<label class="field-label">Valor (R$)</label>';
+    html += '<input type="text" inputmode="decimal" id="receb-valor" placeholder="Ex.: 19200,00">';
+    html += '<button class="btn-primary" id="receb-submit-btn" onclick="submitRecebimento()">' + (recebimentoModo === 'previsto' ? 'Adicionar Previsão' : 'Registrar') + '</button>';
+    html += '</div>';
+
     html += '</div><div>';
 
+    // Resumo financeiro
+    const previstosFuturos = previstos.filter(r => r.dataPrevista >= hoje);
     html += '<div class="card"><div class="card-title">RESUMO FINANCEIRO</div>';
     html += '<div class="linha"><div class="linha-label">Valor do Contrato</div><div class="linha-valor">' + brl(o.contrato || 0) + '</div></div>';
     html += '<div class="linha"><div class="linha-label">Já Recebido</div><div class="linha-valor" style="color:#27AE60">' + brl(c.totalRecebido) + '</div></div>';
+    if (previstosFuturos.length > 0) {
+      const prox = previstosFuturos[0];
+      const diasAte = Math.round((new Date(prox.dataPrevista + 'T12:00:00') - new Date()) / (1000 * 60 * 60 * 24));
+      html += '<div class="linha"><div class="linha-label">Próxima Previsão</div><div class="linha-valor" style="color:var(--purple)">' + brl(prox.valor) + ' <span style="font-size:11px;font-weight:500;opacity:0.8;">em ' + diasAte + 'd</span></div></div>';
+    }
     html += '<div class="divider"><div class="linha bold"><div class="linha-label">Saldo a Receber</div><div class="linha-valor" style="color:' + (c.saldoReceber > 0 ? '#E67E22' : '#27AE60') + '">' + brl(c.saldoReceber) + '</div></div></div>';
     html += '</div>';
 
-    html += '<div class="card"><div class="card-title">RECEBIMENTOS (' + (o.recebimentos || []).length + ')</div>';
-    if (!o.recebimentos || o.recebimentos.length === 0) {
+    // Previstos
+    if (previstos.length > 0) {
+      html += '<div class="card"><div class="card-title">PREVISTOS (' + previstos.length + ')</div>';
+      previstos.forEach(r => {
+        const atrasado = r.dataPrevista < hoje;
+        const diasAtraso = atrasado ? Math.round((new Date() - new Date(r.dataPrevista + 'T12:00:00')) / (1000 * 60 * 60 * 24)) : 0;
+        const diasFuturos = !atrasado ? Math.round((new Date(r.dataPrevista + 'T12:00:00') - new Date()) / (1000 * 60 * 60 * 24)) : 0;
+        html += '<div class="receb-previsto-item' + (atrasado ? ' atrasado' : '') + '">';
+        html += '<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px;">';
+        html += '<div style="flex:1;min-width:0;">';
+        html += '<div class="lanc-desc">' + escapeHtml(r.descricao || 'Recebimento previsto') + '</div>';
+        html += '<div class="lanc-data">Previsto: ' + dateBR(r.dataPrevista) + '</div>';
+        if (atrasado) {
+          html += '<div class="badge-atraso">⚠ ' + diasAtraso + (diasAtraso === 1 ? ' dia' : ' dias') + ' em atraso</div>';
+        } else if (diasFuturos <= 7) {
+          html += '<div class="badge-previsto">Em ' + diasFuturos + (diasFuturos === 1 ? ' dia' : ' dias') + '</div>';
+        }
+        html += '</div>';
+        html += '<div style="display:flex;flex-direction:column;align-items:flex-end;gap:6px;">';
+        html += '<div class="lanc-valor">' + brl(r.valor) + '</div>';
+        html += '<button class="btn-marcar-recebido" onclick="marcarRecebido(\'' + r.id + '\')">✓ Marcar recebido</button>';
+        html += '</div></div>';
+        html += '<div style="display:flex;justify-content:flex-end;margin-top:8px;">';
+        html += '<button class="btn-remove" onclick="removerRecebimento(\'' + r.id + '\')" style="color:var(--ink-4);">×</button>';
+        html += '</div></div>';
+      });
+      html += '</div>';
+    }
+
+    // Recebidos
+    const countLabel = recebidos.length > 0 ? ' (' + recebidos.length + ')' : '';
+    html += '<div class="card"><div class="card-title">RECEBIDOS' + countLabel + '</div>';
+    if (recebidos.length === 0) {
       html += '<div class="empty">Nenhum recebimento registrado.</div>';
     } else {
-      const ord = o.recebimentos.slice().sort((a,b) => b.data.localeCompare(a.data));
-      ord.forEach(r => {
+      recebidos.forEach(r => {
         html += '<div class="lancamento">';
         html += '<div style="flex:1; min-width:0;"><div class="lanc-desc">' + escapeHtml(r.descricao || 'Recebimento') + '</div>';
-        html += '<div class="lanc-data">' + dateBR(r.data) + '</div></div>';
+        html += '<div class="lanc-data">' + dateBR(r.data) + (r.dataPrevista ? ' <span style="color:var(--ink-4);">(prev. ' + dateBR(r.dataPrevista) + ')</span>' : '') + '</div></div>';
         html += '<div class="lanc-right"><div class="lanc-valor entrada">+ ' + brl(r.valor) + '</div>';
         html += '<button class="btn-remove" onclick="removerRecebimento(\'' + r.id + '\')">×</button></div></div>';
       });
     }
     html += '</div>';
+
     html += '</div></div>';
     return html;
   }
@@ -941,7 +1017,7 @@
     (o.gastosAvulsos || []).forEach(g => {
       hist.push({data: g.data, tipo: getCategoriaNome(g.categoria), desc: g.descricao || 'Gasto avulso', valor: g.valor, id: g.id, kind: 'avulso', sinal: -1});
     });
-    (o.recebimentos || []).forEach(r => {
+    (o.recebimentos || []).filter(r => r.previsto !== true).forEach(r => {
       hist.push({data: r.data, tipo: 'Recebimento', desc: r.descricao || 'Recebimento', valor: r.valor, id: r.id, kind: 'receb', sinal: 1});
     });
     hist.sort((a,b) => b.data.localeCompare(a.data));
@@ -1346,6 +1422,53 @@
     render();
   }
 
+  function submitRecebimento() {
+    if (recebimentoModo === 'previsto') {
+      lancarRecebimentoPrevisto();
+    } else {
+      lancarRecebimento();
+    }
+  }
+
+  function setRecebimentoModo(modo) {
+    recebimentoModo = modo;
+    document.querySelectorAll('.receb-form-pill').forEach((p, i) => {
+      p.classList.toggle('active', (i === 0 && modo === 'recebido') || (i === 1 && modo === 'previsto'));
+    });
+    const lbl = document.getElementById('receb-date-label');
+    if (lbl) lbl.textContent = modo === 'previsto' ? 'Data Prevista' : 'Data do Recebimento';
+    const btn = document.getElementById('receb-submit-btn');
+    if (btn) btn.textContent = modo === 'previsto' ? 'Adicionar Previsão' : 'Registrar';
+  }
+
+  function lancarRecebimentoPrevisto() {
+    const obra = getObra(obraAtualId);
+    const dataInput = document.getElementById('receb-data').value;
+    if (!dataInput) { alert('Informe a data prevista.'); return; }
+    const descricao = document.getElementById('receb-desc').value.trim();
+    const valor = parseNum(document.getElementById('receb-valor').value);
+    if (valor <= 0) { alert('Informe um valor válido.'); return; }
+    if (!obra.recebimentos) obra.recebimentos = [];
+    obra.recebimentos.push({
+      id: 'rc_' + Date.now() + '_' + Math.random().toString(36).slice(2,6),
+      dataPrevista: dataInput, descricao: descricao, valor: valor, previsto: true
+    });
+    salvar();
+    render();
+    toast('Previsão adicionada');
+  }
+
+  function marcarRecebido(id) {
+    const obra = getObra(obraAtualId);
+    const r = (obra.recebimentos || []).find(x => x.id === id);
+    if (!r) return;
+    r.previsto = false;
+    r.data = hojeISO();
+    salvar();
+    render();
+    toast('Marcado como recebido');
+  }
+
   function adicionarEmpreitada() {
     const obra = getObra(obraAtualId);
     const nome = document.getElementById('emp-nome').value.trim();
@@ -1502,8 +1625,16 @@
     }
 
     if (obra.recebimentos && obra.recebimentos.length > 0) {
-      ctx += '\nRECEBIMENTOS:\n';
-      obra.recebimentos.forEach(r => { ctx += '- ' + dateBR(r.data) + ': ' + (r.descricao || 'Recebimento') + ' — ' + brl(r.valor) + '\n'; });
+      const recbEf = obra.recebimentos.filter(r => r.previsto !== true);
+      const recbPrev = obra.recebimentos.filter(r => r.previsto === true);
+      if (recbEf.length > 0) {
+        ctx += '\nRECEBIMENTOS EFETUADOS:\n';
+        recbEf.forEach(r => { ctx += '- ' + dateBR(r.data) + ': ' + (r.descricao || 'Recebimento') + ' — ' + brl(r.valor) + '\n'; });
+      }
+      if (recbPrev.length > 0) {
+        ctx += '\nRECEBIMENTOS PREVISTOS:\n';
+        recbPrev.forEach(r => { ctx += '- Previsão ' + dateBR(r.dataPrevista) + ': ' + (r.descricao || 'Previsto') + ' — ' + brl(r.valor) + (r.dataPrevista < hojeISO() ? ' [ATRASADO]' : '') + '\n'; });
+      }
     }
 
     if (obra.nota) ctx += '\nANOTAÇÕES: ' + obra.nota.substring(0, 500) + '\n';
@@ -1670,6 +1801,12 @@
     }
     if (obra.contrato > 0 && c.totalRecebido > 0 && c.saldoReceber > obra.contrato * 0.5) {
       alertas.push({ texto: 'A receber pendente', tipo: 'amber' });
+    }
+    const hoje2 = hojeISO();
+    const recebsAtrasados = (obra.recebimentos || []).filter(r => r.previsto === true && r.dataPrevista && r.dataPrevista < hoje2);
+    if (recebsAtrasados.length > 0) {
+      const n = recebsAtrasados.length;
+      alertas.push({ texto: n + (n === 1 ? ' receb. atrasado' : ' receb. atrasados'), tipo: 'red' });
     }
     return alertas;
   }
@@ -2759,16 +2896,34 @@
 
   async function entrarComGoogle() {
     const btn = document.getElementById('btn-login-google');
+    const googleSVG = '<svg width="18" height="18" viewBox="0 0 18 18" xmlns="http://www.w3.org/2000/svg"><path d="M17.64 9.2c0-.637-.057-1.251-.164-1.84H9v3.481h4.844c-.209 1.118-.843 2.065-1.796 2.702v2.246h2.908C16.534 14.175 17.64 11.9 17.64 9.2z" fill="#4285F4"/><path d="M9 18c2.43 0 4.467-.806 5.956-2.18l-2.908-2.246c-.806.54-1.837.86-3.048.86-2.344 0-4.328-1.584-5.036-3.711H.957v2.318C2.438 15.983 5.482 18 9 18z" fill="#34A853"/><path d="M3.964 10.712A5.413 5.413 0 0 1 3.682 9c0-.593.102-1.17.282-1.712V4.97H.957A8.996 8.996 0 0 0 0 9c0 1.452.348 2.827.957 4.03l3.007-2.318z" fill="#FBBC05"/><path d="M9 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.463.891 11.426 0 9 0 5.482 0 2.438 2.017.957 4.969L3.964 6.288C4.672 4.161 6.656 3.58 9 3.58z" fill="#EA4335"/></svg>';
+    const restoreBtn = () => {
+      if (btn) { btn.disabled = false; btn.innerHTML = googleSVG + 'Entrar com Google'; }
+    };
     if (btn) { btn.disabled = true; btn.textContent = 'Entrando...'; }
     try {
       await window._firebaseSignIn();
+      // onAuthStateChanged handles navigation after successful login
     } catch(e) {
-      if (btn) {
-        btn.disabled = false;
-        const googleSVG = '<svg width="18" height="18" viewBox="0 0 18 18" xmlns="http://www.w3.org/2000/svg"><path d="M17.64 9.2c0-.637-.057-1.251-.164-1.84H9v3.481h4.844c-.209 1.118-.843 2.065-1.796 2.702v2.246h2.908C16.534 14.175 17.64 11.9 17.64 9.2z" fill="#4285F4"/><path d="M9 18c2.43 0 4.467-.806 5.956-2.18l-2.908-2.246c-.806.54-1.837.86-3.048.86-2.344 0-4.328-1.584-5.036-3.711H.957v2.318C2.438 15.983 5.482 18 9 18z" fill="#34A853"/><path d="M3.964 10.712A5.413 5.413 0 0 1 3.682 9c0-.593.102-1.17.282-1.712V4.97H.957A8.996 8.996 0 0 0 0 9c0 1.452.348 2.827.957 4.03l3.007-2.318z" fill="#FBBC05"/><path d="M9 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.463.891 11.426 0 9 0 5.482 0 2.438 2.017.957 4.969L3.964 6.288C4.672 4.161 6.656 3.58 9 3.58z" fill="#EA4335"/></svg>';
-        btn.innerHTML = googleSVG + 'Entrar com Google';
+      const code = e.code || '';
+      if (code === 'auth/popup-closed-by-user' || code === 'auth/cancelled-popup-request') {
+        // User dismissed popup — restore button silently
+        restoreBtn();
+      } else if (code === 'auth/popup-blocked') {
+        // Safari/iOS blocked the popup — fall back to redirect
+        if (btn) { btn.textContent = 'Redirecionando...'; }
+        try {
+          await window._firebaseSignInRedirect();
+          // Page will redirect; nothing further to do
+        } catch(e2) {
+          restoreBtn();
+          alert('Não foi possível abrir o login do Google.\nPermita popups para este site e tente novamente.');
+        }
+      } else {
+        restoreBtn();
+        console.error('Login error:', code, e.message);
+        alert('Não foi possível entrar. Tente novamente.');
       }
-      if (e.code !== 'auth/popup-closed-by-user') alert('Erro ao entrar: ' + (e.message || e));
     }
   }
 
@@ -2895,8 +3050,18 @@
     });
     const fbAuth = firebase.auth();
     window._fbdb             = firebase.firestore();
-    window._firebaseSignIn   = () => fbAuth.signInWithPopup(new firebase.auth.GoogleAuthProvider());
-    window._firebaseSignOut  = () => fbAuth.signOut();
+    const _provider = new firebase.auth.GoogleAuthProvider();
+    window._firebaseSignIn         = () => fbAuth.signInWithPopup(_provider);
+    window._firebaseSignInRedirect = () => fbAuth.signInWithRedirect(_provider);
+    window._firebaseSignOut        = () => fbAuth.signOut();
+
+    // Handle redirect result (for iOS Safari / popup-blocked fallback).
+    // Errors here are non-critical — "missing initial state" just means no pending redirect.
+    fbAuth.getRedirectResult().catch(e => {
+      if (e.code !== 'auth/no-current-user') {
+        console.warn('Firebase redirect result (non-critical):', e.code || e.message);
+      }
+    });
 
     fbAuth.onAuthStateChanged(user => {
       if (window._onAuthStateChanged) window._onAuthStateChanged(user);
