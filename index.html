@@ -239,6 +239,18 @@
   [data-theme="dark"] .empreitada-form { background: #1C1C1E; }
   [data-theme="dark"] .empreitada-item { background: #1C1C1E; }
   [data-theme="dark"] .empreitada-item.pago { background: #1E1430; }
+  .ad-form { background:var(--bg); border:1.5px dashed rgba(115,1,140,0.22); border-radius:10px; padding:14px; margin-top:10px; display:none; }
+  [data-theme="dark"] .ad-form { background:#1C1C1E; }
+  .adiantamento-item { display:flex; align-items:center; gap:8px; padding:5px 0; border-bottom:1px dashed rgba(0,0,0,0.07); }
+  .adiantamento-item:last-child { border-bottom:none; }
+  .adiantamento-info { flex:1; min-width:0; }
+  .adiantamento-desc { font-size:13px; color:var(--ink-2); }
+  .adiantamento-data { font-size:11px; color:var(--ink-3); }
+  .adiantamento-valor { font-size:14px; font-weight:700; color:var(--ink); flex-shrink:0; }
+  .emp-saldo-box { background:rgba(115,1,140,0.05); border-radius:10px; padding:10px 14px; margin-top:10px; display:flex; justify-content:space-between; align-items:center; gap:10px; }
+  .emp-saldo-label { font-size:12px; font-weight:700; color:var(--purple); }
+  .emp-saldo-valor { font-size:17px; font-weight:800; color:var(--purple); letter-spacing:-0.3px; }
+  [data-theme="dark"] .emp-saldo-box { background:rgba(115,1,140,0.10); }
   [data-theme="dark"] .chat-bubble-ai { background: #2C2C2E; color: var(--ink); }
   [data-theme="dark"] .chat-welcome { background: rgba(115,1,140,0.15); }
   [data-theme="dark"] .backup-text { background: #1C1C1E; }
@@ -579,7 +591,11 @@
   function calcularObra(obra) {
     const totalDiarias = (obra.diarias || []).reduce((s,d) => s + Number(d.valor || 0), 0);
     const totalAvulsos = (obra.gastosAvulsos || []).reduce((s,g) => s + Number(g.valor || 0), 0);
-    const totalEmp = (obra.empreitadas || []).reduce((s,e) => s + (e.pago ? Number(e.valor||0) : 0) + (e.bonusPago ? Number(e.bonus||0) : 0), 0);
+    const totalEmp = (obra.empreitadas || []).reduce((s,e) => {
+      const ads = (e.adiantamentos || []).reduce((a,x) => a + Number(x.valor||0), 0);
+      const saldo = Math.max(0, Number(e.valor||0) - ads);
+      return s + ads + (e.pago ? saldo : 0) + (e.bonusPago ? Number(e.bonus||0) : 0);
+    }, 0);
     const custoTotal = totalDiarias + totalAvulsos + totalEmp;
     const imposto = Number(obra.contrato || 0) * (Number(obra.impostoPct || 0) / 100);
     const lucro = Number(obra.contrato || 0) - custoTotal - imposto;
@@ -898,19 +914,61 @@
       html += '<div class="empty">Nenhuma empreitada cadastrada.</div>';
     } else {
       o.empreitadas.forEach(e => {
+        const adList = e.adiantamentos || [];
+        const totalAd = adList.reduce((s,a) => s + Number(a.valor||0), 0);
+        const saldo = Math.max(0, Number(e.valor||0) - totalAd);
+
         html += '<div class="empreitada-item ' + (e.pago ? 'pago' : '') + '">';
+
+        // Cabeçalho: nome + valor acordado
         html += '<div class="emp-row">';
         html += '<div class="emp-info"><div class="emp-label">' + escapeHtml(e.nome) + '</div>';
-        html += '<div class="emp-valor">' + brl(e.valor) + '</div></div>';
-        html += '<button class="btn-pago ' + (e.pago ? 'ativo' : '') + '" onclick="toggleEmpPago(\'' + e.id + '\')">' + (e.pago ? '✓ Pago' : 'Pagar') + '</button>';
+        html += '<div style="font-size:11px;color:var(--ink-3);margin-top:2px;">Valor acordado: ' + brl(e.valor) + '</div>';
+        html += '</div></div>';
+
+        // Adiantamentos
+        if (adList.length > 0) {
+          html += '<div style="margin-top:10px;padding-top:10px;border-top:1px dashed rgba(0,0,0,0.08);">';
+          html += '<div style="font-size:10px;font-weight:700;letter-spacing:1.5px;color:var(--ink-3);text-transform:uppercase;margin-bottom:6px;">Adiantamentos</div>';
+          adList.forEach(a => {
+            html += '<div class="adiantamento-item">';
+            html += '<div class="adiantamento-info"><div class="adiantamento-desc">' + escapeHtml(a.descricao) + '</div>';
+            html += '<div class="adiantamento-data">' + dateBR(a.data) + '</div></div>';
+            html += '<div class="adiantamento-valor">' + brl(a.valor) + '</div>';
+            html += '<button class="btn-remove" onclick="removerAdiantamento(\'' + e.id + '\',\'' + a.id + '\')" title="Remover adiantamento">×</button>';
+            html += '</div>';
+          });
+          html += '</div>';
+        }
+
+        // Botão abrir form de adiantamento
+        html += '<button class="btn-mini" style="margin-top:10px;" onclick="toggleAdiantamentoForm(\'' + e.id + '\')">+ Adicionar adiantamento</button>';
+
+        // Form inline (oculto por padrão)
+        html += '<div class="ad-form" id="ad-form-' + e.id + '">';
+        html += '<label class="field-label">Data</label><input type="date" id="ad-data-' + e.id + '">';
+        html += '<label class="field-label">Descrição (ex: gasolina, vale, almoço)</label><input type="text" id="ad-desc-' + e.id + '" placeholder="Ex.: vale transporte">';
+        html += '<label class="field-label">Valor (R$)</label><input type="text" inputmode="decimal" id="ad-valor-' + e.id + '" placeholder="Ex.: 200,00">';
+        html += '<button class="btn-primary" style="margin-top:8px;" onclick="adicionarAdiantamento(\'' + e.id + '\')">Registrar adiantamento</button>';
         html += '</div>';
+
+        // Saldo + botão pagar
+        html += '<div class="emp-saldo-box">';
+        html += '<span class="emp-saldo-label">Saldo a pagar</span>';
+        html += '<div style="display:flex;align-items:center;gap:10px;">';
+        html += '<span class="emp-saldo-valor">' + brl(saldo) + '</span>';
+        html += '<button class="btn-pago ' + (e.pago ? 'ativo' : '') + '" onclick="toggleEmpPago(\'' + e.id + '\')">' + (e.pago ? '✓ Pago' : 'Pagar') + '</button>';
+        html += '</div></div>';
+
+        // Bônus
         if (Number(e.bonus || 0) > 0) {
-          html += '<div class="emp-row" style="margin-top: 10px; padding-top: 10px; border-top: 1px dashed #DDD;">';
+          html += '<div class="emp-row" style="margin-top:10px;padding-top:10px;border-top:1px dashed rgba(0,0,0,0.08);">';
           html += '<div class="emp-info"><div class="emp-sub">Bônus (entrega no prazo)</div>';
-          html += '<div class="emp-valor" style="font-size: 14px;">' + brl(e.bonus) + '</div></div>';
+          html += '<div class="emp-valor" style="font-size:14px;">' + brl(e.bonus) + '</div></div>';
           html += '<button class="btn-pago ' + (e.bonusPago ? 'ativo' : '') + '" onclick="toggleEmpBonus(\'' + e.id + '\')">' + (e.bonusPago ? '✓ Pago' : 'Pagar') + '</button>';
           html += '</div>';
         }
+
         html += '<div class="emp-actions"><button class="btn-mini danger" onclick="removerEmpreitada(\'' + e.id + '\')">Remover</button></div>';
         html += '</div>';
       });
@@ -1504,6 +1562,44 @@
     render();
   }
 
+  function toggleAdiantamentoForm(empId) {
+    const f = document.getElementById('ad-form-' + empId);
+    if (!f) return;
+    const opening = f.style.display === 'none' || f.style.display === '';
+    f.style.display = opening ? 'block' : 'none';
+    if (opening) {
+      const d = document.getElementById('ad-data-' + empId);
+      if (d && !d.value) d.value = hojeISO();
+    }
+  }
+
+  function adicionarAdiantamento(empId) {
+    const obra = getObra(obraAtualId);
+    const e = (obra.empreitadas || []).find(x => x.id === empId);
+    if (!e) return;
+    const data = document.getElementById('ad-data-' + empId).value;
+    if (!data) { toast('Informe a data'); return; }
+    const descricao = document.getElementById('ad-desc-' + empId).value.trim() || 'Adiantamento';
+    const valor = parseNum(document.getElementById('ad-valor-' + empId).value);
+    if (valor <= 0) { toast('Informe um valor válido'); return; }
+    if (!e.adiantamentos) e.adiantamentos = [];
+    e.adiantamentos.push({
+      id: 'ad_' + Date.now() + '_' + Math.random().toString(36).slice(2,6),
+      data, descricao, valor
+    });
+    salvar(); render();
+    toast('Adiantamento registrado');
+  }
+
+  function removerAdiantamento(empId, adId) {
+    const obra = getObra(obraAtualId);
+    const e = (obra.empreitadas || []).find(x => x.id === empId);
+    if (!e) return;
+    e.adiantamentos = (e.adiantamentos || []).filter(a => a.id !== adId);
+    salvar(); render();
+    toast('Adiantamento removido');
+  }
+
   function adicionarTrabalhador() {
     const obra = getObra(obraAtualId);
     const nome = document.getElementById('novo-trab-nome').value.trim();
@@ -2048,20 +2144,45 @@
   function _buildEmpreitadaUnicaPreviewHTML(obra, empId) {
     const e = (obra.empreitadas || []).find(x => x.id === empId);
     if (!e) return '<div class="empty">Empreitada não encontrada.</div>';
-    const statusCor = e.pago ? 'var(--green)' : 'var(--amber)';
-    const statusTxt = e.pago ? 'Pago' : 'A pagar';
+    const adList = e.adiantamentos || [];
+    const totalAd = adList.reduce((s,a) => s + Number(a.valor||0), 0);
+    const saldo = Math.max(0, Number(e.valor||0) - totalAd);
+    const statusSaldoCor = e.pago ? 'var(--green)' : 'var(--amber)';
+    const statusSaldoTxt = e.pago ? 'Pago' : 'A pagar';
+
     let html = '<div class="card-title">EMPREITADA: ' + escapeHtml(e.nome).toUpperCase() + '</div>';
-    html += '<div class="lancamento">';
-    html += '<div><div class="lanc-desc">' + escapeHtml(e.nome) + '</div>';
+
+    // Valor acordado
+    html += '<div class="linha"><div class="linha-label">Valor acordado</div><div class="linha-valor">' + brl(e.valor) + '</div></div>';
+
+    // Adiantamentos
+    if (adList.length > 0) {
+      html += '<div style="margin:12px 0 0;padding-top:10px;border-top:1px dashed rgba(0,0,0,0.08);">';
+      html += '<div style="font-size:10px;font-weight:700;letter-spacing:1.5px;color:var(--ink-3);text-transform:uppercase;margin-bottom:8px;">Adiantamentos</div>';
+      html += '<table class="rel-table"><thead><tr><th>Data</th><th>Descrição</th><th style="text-align:right;">Valor</th></tr></thead><tbody>';
+      adList.forEach(a => {
+        html += '<tr><td>' + dateBR(a.data) + '</td><td>' + escapeHtml(a.descricao) + '</td><td style="text-align:right;">' + brl(a.valor) + '</td></tr>';
+      });
+      html += '</tbody></table>';
+      html += '<div class="linha"><div class="linha-label">Total adiantamentos</div><div class="linha-valor" style="color:var(--ink-3);">– ' + brl(totalAd) + '</div></div>';
+      html += '</div>';
+    }
+
+    // Saldo a pagar
+    html += '<div class="linha bold" style="border-top:1px solid rgba(0,0,0,0.08);margin-top:6px;padding-top:8px;">';
+    html += '<div class="linha-label">Saldo a pagar</div>';
+    html += '<div class="linha-valor" style="color:' + statusSaldoCor + ';">' + brl(saldo) + ' <span style="font-size:10px;font-weight:600;">(' + statusSaldoTxt + ')</span></div></div>';
+
+    // Bônus
     if (Number(e.bonus || 0) > 0) {
       const bonusCor = e.bonusPago ? 'var(--green)' : 'var(--ink-3)';
-      html += '<div class="lanc-data">Bônus: ' + brl(e.bonus) + ' — <span style="color:' + bonusCor + ';">' + (e.bonusPago ? 'Pago' : 'A pagar') + '</span></div>';
+      html += '<div class="linha" style="margin-top:4px;"><div class="linha-label">Bônus (entrega no prazo)</div>';
+      html += '<div class="linha-valor" style="font-size:13px;">'+brl(e.bonus)+' <span style="font-size:10px;color:'+bonusCor+';">' + (e.bonusPago ? 'Pago' : 'A pagar') + '</span></div></div>';
     }
-    html += '</div>';
-    html += '<div class="lanc-right"><div><div class="lanc-valor">' + brl(e.valor) + '</div>';
-    html += '<div style="font-size:11px;font-weight:600;color:' + statusCor + ';text-align:right;margin-top:2px;">' + statusTxt + '</div></div></div></div>';
-    const totalPago = (e.pago ? Number(e.valor || 0) : 0) + (e.bonusPago ? Number(e.bonus || 0) : 0);
-    const totalAPagar = (!e.pago ? Number(e.valor || 0) : 0) + (Number(e.bonus || 0) > 0 && !e.bonusPago ? Number(e.bonus || 0) : 0);
+
+    // Totais finais
+    const totalPago = totalAd + (e.pago ? saldo : 0) + (e.bonusPago ? Number(e.bonus||0) : 0);
+    const totalAPagar = (e.pago ? 0 : saldo) + (Number(e.bonus||0) > 0 && !e.bonusPago ? Number(e.bonus||0) : 0);
     html += '<div class="rel-total-dinheiro" style="margin-top:12px;">';
     html += '<span class="rel-total-label">TOTAL PAGO</span><span class="rel-total-valor">' + brl(totalPago) + '</span></div>';
     if (totalAPagar > 0) {
@@ -2298,26 +2419,72 @@
     doc.text('Empreiteiro: ', ML, y); doc.setTextColor(30, 30, 30); doc.setFont('helvetica', 'bold');
     doc.text(e.nome, ML + 25, y); y += 12;
 
+    // Adiantamentos
+    const adList = e.adiantamentos || [];
+    const totalAd = adList.reduce((s,a) => s + Number(a.valor||0), 0);
+    const saldo = Math.max(0, Number(e.valor||0) - totalAd);
+
     doc.setDrawColor(220, 220, 220); doc.line(ML, y - 4, PW - MR, y - 4);
     doc.setTextColor(100, 100, 100); doc.setFontSize(8); doc.setFont('helvetica', 'bold');
     doc.text('DETALHES DA EMPREITADA', ML, y); y += 8;
 
+    // Valor acordado
     doc.setFillColor(245, 245, 245); doc.rect(ML, y - 4, CW, 7, 'F');
-    doc.setTextColor(100, 100, 100); doc.setFontSize(8); doc.setFont('helvetica', 'bold');
-    doc.text('DESCRIÇÃO', ML + 1, y); doc.text('VALOR', ML + 100, y); doc.text('STATUS', PW - MR - 2, y, { align: 'right' });
-    y += 5; doc.setDrawColor(220, 220, 220); doc.line(ML, y - 2, PW - MR, y - 2);
+    doc.setTextColor(80, 80, 80); doc.setFontSize(8); doc.setFont('helvetica', 'normal');
+    doc.text('Valor acordado', ML + 1, y);
+    doc.setTextColor(30, 30, 30); doc.setFont('helvetica', 'bold');
+    doc.text(brl(e.valor), PW - MR - 2, y, { align: 'right' });
+    y += 9;
 
-    doc.setTextColor(30, 30, 30); doc.setFontSize(9); doc.setFont('helvetica', 'bold');
-    doc.text(e.nome, ML + 1, y); doc.setFont('helvetica', 'normal');
-    doc.text(brl(e.valor), ML + 100, y);
-    const statusTxt = e.pago ? 'Pago' : 'A pagar';
+    // Tabela adiantamentos (se houver)
+    if (adList.length > 0) {
+      doc.setDrawColor(220, 220, 220); doc.line(ML, y - 4, PW - MR, y - 4);
+      doc.setTextColor(100, 100, 100); doc.setFontSize(8); doc.setFont('helvetica', 'bold');
+      doc.text('ADIANTAMENTOS', ML, y); y += 6;
+
+      doc.setFillColor(248, 248, 248); doc.rect(ML, y - 4, CW, 6, 'F');
+      doc.setTextColor(100, 100, 100); doc.setFontSize(7); doc.setFont('helvetica', 'bold');
+      doc.text('DATA', ML + 1, y); doc.text('DESCRIÇÃO', ML + 28, y); doc.text('VALOR', PW - MR - 2, y, { align: 'right' });
+      y += 5; doc.setDrawColor(220, 220, 220); doc.line(ML, y - 2, PW - MR, y - 2);
+
+      adList.forEach(a => {
+        if (y > PH - 30) {
+          doc.addPage();
+          doc.setFillColor(115, 1, 140); doc.rect(0, 0, PW, 28, 'F');
+          doc.setTextColor(255, 255, 255); doc.setFontSize(16); doc.setFont('helvetica', 'bold');
+          doc.text('AS CONSTRUCTION', ML, 11);
+          y = 36;
+        }
+        doc.setTextColor(30, 30, 30); doc.setFontSize(8); doc.setFont('helvetica', 'normal');
+        doc.text(dateBR(a.data), ML + 1, y);
+        doc.text(a.descricao.length > 40 ? a.descricao.slice(0,38)+'…' : a.descricao, ML + 28, y);
+        doc.text(brl(a.valor), PW - MR - 2, y, { align: 'right' });
+        y += 6; doc.setDrawColor(235, 235, 235); doc.line(ML, y - 2, PW - MR, y - 2);
+      });
+
+      y += 2;
+      doc.setTextColor(80, 80, 80); doc.setFontSize(8); doc.setFont('helvetica', 'normal');
+      doc.text('Total adiantamentos', ML + 1, y);
+      doc.setFont('helvetica', 'bold'); doc.setTextColor(30, 30, 30);
+      doc.text('– ' + brl(totalAd), PW - MR - 2, y, { align: 'right' });
+      y += 9;
+    }
+
+    // Saldo a pagar
+    doc.setDrawColor(200, 200, 200); doc.line(ML, y - 4, PW - MR, y - 4);
+    doc.setTextColor(115, 1, 140); doc.setFontSize(9); doc.setFont('helvetica', 'bold');
+    doc.text('Saldo a pagar', ML + 1, y);
+    doc.text(brl(saldo), PW - MR - 2, y, { align: 'right' });
+    const statusSaldo = e.pago ? 'Pago' : 'A pagar';
+    doc.setFontSize(7); doc.setFont('helvetica', 'normal');
     doc.setTextColor(e.pago ? 5 : 180, e.pago ? 150 : 120, e.pago ? 105 : 0);
-    doc.text(statusTxt, PW - MR - 2, y, { align: 'right' });
-    y += 7;
+    doc.text('(' + statusSaldo + ')', ML + 1, y + 5);
+    y += 12;
 
-    let totalPago = e.pago ? Number(e.valor || 0) : 0;
-    let totalAPagar = !e.pago ? Number(e.valor || 0) : 0;
+    let totalPago = totalAd + (e.pago ? saldo : 0);
+    let totalAPagar = e.pago ? 0 : saldo;
 
+    // Bônus
     if (Number(e.bonus || 0) > 0) {
       doc.setDrawColor(235, 235, 235); doc.line(ML, y - 2, PW - MR, y - 2);
       doc.setTextColor(120, 120, 120); doc.setFontSize(8); doc.setFont('helvetica', 'normal');
