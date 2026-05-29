@@ -522,15 +522,22 @@
 .relcli-info-link:hover { text-decoration:underline; }
 
   /* ── Obra Sidebar / Drawer ── */
-  .obra-layout { display: flex; gap: 20px; align-items: flex-start; }
+  .obra-layout { display: flex; gap: 0; align-items: flex-start; }
   .obra-content { flex: 1; min-width: 0; }
 
   .obra-sidebar {
     width: 220px; flex-shrink: 0;
+    margin-right: 20px;
     background: var(--surface); border-radius: var(--radius-card);
     box-shadow: var(--shadow-card);
     position: sticky; top: 20px;
     max-height: calc(100vh - 40px); overflow-y: auto; overflow-x: hidden;
+    transition: width 250ms var(--ease), min-width 250ms var(--ease),
+                opacity 200ms ease, margin-right 250ms var(--ease);
+  }
+  .obra-layout.collapsed .obra-sidebar {
+    width: 0; min-width: 0; margin-right: 0;
+    opacity: 0; pointer-events: none; overflow: hidden;
   }
   .sidebar-top {
     display: flex; align-items: center; justify-content: space-between;
@@ -569,14 +576,16 @@
   }
 
   .btn-hamburger {
-    display: none;
+    display: flex;
     align-items: center; justify-content: center;
     width: 40px; height: 40px; flex-shrink: 0;
     background: rgba(255,255,255,0.15);
     border: 1px solid rgba(255,255,255,0.3);
     border-radius: 10px; color: #fff; font-size: 22px;
     cursor: pointer; font-family: inherit; line-height: 1;
+    transition: background 0.15s ease;
   }
+  .btn-hamburger:hover { background: rgba(255,255,255,0.25); }
 
   .obra-overlay {
     display: none; position: fixed; inset: 0;
@@ -598,7 +607,6 @@
     }
     .obra-sidebar.open { transform: translateX(0); }
     .btn-drawer-close { display: flex; }
-    .btn-hamburger { display: flex; }
   }
 </style>
 </head>
@@ -848,7 +856,7 @@
 
     // Header com hamburger
     let html = '<div class="header" style="gap:12px;">';
-    html += '<button class="btn-hamburger" onclick="abrirDrawer()" aria-label="Menu">&#9776;</button>';
+    html += '<button class="btn-hamburger" onclick="toggleSidebar()" aria-label="Menu">&#9776;</button>';
     html += '<div class="header-left">';
     html += '<div class="header-title obra-title">' + escapeHtml(obra.nome) + '</div>';
     html += '<div class="header-sub">Contrato: ' + brl(obra.contrato || 0) + ' | ' + status.nome + '</div>';
@@ -879,7 +887,8 @@
     ];
 
     // Layout: sidebar + conteúdo
-    html += '<div class="obra-layout">';
+    var sidebarClass = localStorage.getItem('sidebarCollapsed') === '1' ? 'collapsed' : '';
+    html += '<div class="obra-layout ' + sidebarClass + '" id="obra-layout-wrap">';
 
     // Sidebar / Drawer
     html += '<nav class="obra-sidebar" id="obra-drawer">';
@@ -3973,6 +3982,17 @@
     if (el) el.classList.remove('open');
     if (ov) ov.classList.remove('show');
     document.body.style.overflow = '';
+  }
+
+  function toggleSidebar() {
+    if (window.innerWidth < 768) {
+      abrirDrawer();
+      return;
+    }
+    var layout = document.getElementById('obra-layout-wrap');
+    if (!layout) return;
+    var collapsed = layout.classList.toggle('collapsed');
+    localStorage.setItem('sidebarCollapsed', collapsed ? '1' : '0');
   }
 
   function trocarAbaMobile(aba) {
