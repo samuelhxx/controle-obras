@@ -43,10 +43,6 @@
   .header-sub { font-size: 12px; opacity: 0.75; margin-top: 4px; }
   .btn-back { background: rgba(255,255,255,0.15); color: #fff; border: 1px solid rgba(255,255,255,0.3); padding: 9px 14px; border-radius: 10px; font-size: 12px; font-weight: 600; cursor: pointer; font-family: inherit; flex-shrink: 0; transition: background 0.15s ease; }
 
-  .tabs { display: flex; gap: 6px; margin-bottom: 20px; flex-wrap: nowrap; overflow-x: auto; -webkit-overflow-scrolling: touch; scrollbar-width: none; position: sticky; top: 0; z-index: 10; background: var(--bg); padding: 8px 0 10px; }
-  .tabs::-webkit-scrollbar { display: none; }
-  .tab { flex: 0 0 auto; background: rgba(0,0,0,0.06); color: var(--ink-3); border: none; padding: 8px 16px; border-radius: 100px; font-size: 13px; font-weight: 500; cursor: pointer; font-family: inherit; white-space: nowrap; transition: background 0.18s var(--ease), color 0.18s var(--ease); }
-  .tab.active { background: var(--purple); color: #fff; font-weight: 600; }
 
   .card { background: var(--surface); border-radius: var(--radius-card); padding: 24px; margin-bottom: 16px; border: none; box-shadow: var(--shadow-card); animation: fadeUp 0.25s var(--ease) both; }
   .card-title { font-size: 10px; color: var(--ink-3); letter-spacing: 2px; font-weight: 700; text-transform: uppercase; margin-bottom: 20px; }
@@ -196,7 +192,7 @@
     .btn-primary:hover { background: var(--purple-dim); transform: translateY(-1px); box-shadow: 0 4px 16px rgba(115,1,140,0.25); }
     .btn-primary:active { transform: translateY(0); }
     .btn-secondary:hover { background: rgba(115,1,140,0.05); }
-    .tab:hover:not(.active) { background: rgba(0,0,0,0.09); }
+
     .btn-back:hover { background: rgba(255,255,255,0.25); }
     .btn-danger:hover { background: rgba(220,38,38,0.05); }
     .btn-remove-trab:hover { background: rgba(220,38,38,0.05); }
@@ -524,6 +520,86 @@
 [data-theme="dark"] .info-frente-item { border-color:rgba(255,255,255,0.08); }
 .relcli-info-link { display:inline-flex; align-items:center; gap:6px; font-size:12px; color:var(--purple); font-weight:600; cursor:pointer; margin-bottom:16px; text-decoration:none; }
 .relcli-info-link:hover { text-decoration:underline; }
+
+  /* ── Obra Sidebar / Drawer ── */
+  .obra-layout { display: flex; gap: 20px; align-items: flex-start; }
+  .obra-content { flex: 1; min-width: 0; }
+
+  .obra-sidebar {
+    width: 220px; flex-shrink: 0;
+    background: var(--surface); border-radius: var(--radius-card);
+    box-shadow: var(--shadow-card);
+    position: sticky; top: 20px;
+    max-height: calc(100vh - 40px); overflow-y: auto; overflow-x: hidden;
+  }
+  .sidebar-top {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 16px 20px 8px;
+  }
+  .sidebar-title {
+    font-size: 10px; font-weight: 700; color: var(--ink-3);
+    letter-spacing: 2px; text-transform: uppercase;
+  }
+  .btn-drawer-close {
+    display: none;
+    align-items: center; justify-content: center;
+    background: none; border: none; cursor: pointer;
+    color: var(--ink-3); font-size: 20px; padding: 4px 6px;
+    border-radius: 6px; line-height: 1; font-family: inherit;
+    transition: background 0.15s ease;
+  }
+  .btn-drawer-close:hover { background: rgba(0,0,0,0.06); }
+  .sidebar-divider { height: 1px; background: rgba(0,0,0,0.06); margin: 6px 0; }
+  [data-theme="dark"] .sidebar-divider { background: rgba(255,255,255,0.06); }
+
+  .sidebar-item {
+    display: block; width: 100%; padding: 12px 20px;
+    text-align: left; border: none; background: none;
+    color: var(--ink-2); font-size: 14px; font-weight: 500;
+    cursor: pointer; font-family: inherit;
+    border-left: 3px solid transparent;
+    transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+  }
+  @media (hover: hover) {
+    .sidebar-item:hover { background: rgba(115,1,140,0.05); color: var(--purple); }
+  }
+  .sidebar-item.active {
+    background: rgba(115,1,140,0.08); color: var(--purple);
+    font-weight: 700; border-left-color: var(--purple);
+  }
+
+  .btn-hamburger {
+    display: none;
+    align-items: center; justify-content: center;
+    width: 40px; height: 40px; flex-shrink: 0;
+    background: rgba(255,255,255,0.15);
+    border: 1px solid rgba(255,255,255,0.3);
+    border-radius: 10px; color: #fff; font-size: 22px;
+    cursor: pointer; font-family: inherit; line-height: 1;
+  }
+
+  .obra-overlay {
+    display: none; position: fixed; inset: 0;
+    background: rgba(0,0,0,0.45); z-index: 999;
+  }
+  .obra-overlay.show { display: block; animation: fadeIn 0.2s ease; }
+
+  @media (max-width: 767px) {
+    .obra-layout { display: block; }
+    .obra-content { margin-left: 0; }
+    .obra-sidebar {
+      position: fixed; left: 0; top: 0; bottom: 0;
+      width: 280px; max-width: 85vw; z-index: 1000;
+      border-radius: 0 16px 16px 0;
+      box-shadow: 4px 0 24px rgba(0,0,0,0.18);
+      transform: translateX(-100%);
+      transition: transform 250ms var(--ease);
+      max-height: 100vh;
+    }
+    .obra-sidebar.open { transform: translateX(0); }
+    .btn-drawer-close { display: flex; }
+    .btn-hamburger { display: flex; }
+  }
 </style>
 </head>
 <body>
@@ -769,19 +845,21 @@
   function renderObra(obra) {
     const c = calcularObra(obra);
     const status = getStatusInfo(obra.status);
-    let html = '<div class="header">';
+
+    // Header com hamburger
+    let html = '<div class="header" style="gap:12px;">';
+    html += '<button class="btn-hamburger" onclick="abrirDrawer()" aria-label="Menu">&#9776;</button>';
     html += '<div class="header-left">';
     html += '<div class="header-title obra-title">' + escapeHtml(obra.nome) + '</div>';
     html += '<div class="header-sub">Contrato: ' + brl(obra.contrato || 0) + ' | ' + status.nome + '</div>';
     html += '</div>';
     html += '<div style="display:flex;gap:8px;align-items:center;flex-shrink:0;">';
     if (usuarioAtual) html += '<button class="btn-logout" onclick="sair()">Sair</button>';
-    html += '<button class="btn-theme" onclick="toggleTema()" title="Alternar tema">' + (temaEscuro ? '☀' : '◑') + '</button>';
-    html += '<button class="btn-back" onclick="voltarHome()">← Voltar</button>';
+    html += '<button class="btn-theme" onclick="toggleTema()" title="Alternar tema">' + (temaEscuro ? '&#9728;' : '&#9681;') + '</button>';
+    html += '<button class="btn-back" onclick="voltarHome()">&#8592; Voltar</button>';
     html += '</div>';
     html += '</div>';
 
-    html += '<div class="tabs">';
     const abas = [
       ['resumo',      'Resumo'],
       ['info',        'Informações'],
@@ -799,12 +877,27 @@
       ['ia',          'IA'],
       ['relatorio',   'Relatório']
     ];
-    abas.forEach(a => {
-      html += '<button class="tab ' + (abaAtual === a[0] ? 'active' : '') + '" onclick="trocarAba(\'' + a[0] + '\')">' + a[1] + '</button>';
-    });
-    html += '</div>';
 
-    html += '<div class="aba-content">';
+    // Layout: sidebar + conteúdo
+    html += '<div class="obra-layout">';
+
+    // Sidebar / Drawer
+    html += '<nav class="obra-sidebar" id="obra-drawer">';
+    html += '<div class="sidebar-top">';
+    html += '<span class="sidebar-title">Seções</span>';
+    html += '<button class="btn-drawer-close" onclick="fecharDrawer()" aria-label="Fechar menu">&#10005;</button>';
+    html += '</div>';
+    html += '<div class="sidebar-divider"></div>';
+    abas.forEach(function(a) {
+      html += '<button class="sidebar-item ' + (abaAtual === a[0] ? 'active' : '') + '" onclick="trocarAbaMobile(\'' + a[0] + '\')">' + a[1] + '</button>';
+    });
+    html += '</nav>';
+
+    // Overlay (fecha drawer no mobile ao clicar fora)
+    html += '<div class="obra-overlay" id="obra-overlay" onclick="fecharDrawer()"></div>';
+
+    // Conteúdo da aba
+    html += '<div class="obra-content"><div class="aba-content">';
     if (abaAtual === 'resumo') html += renderAbaResumo(obra, c);
     else if (abaAtual === 'diarias') html += renderAbaDiarias(obra, c);
     else if (abaAtual === 'avulsos') html += renderAbaAvulsos(obra, c);
@@ -820,11 +913,11 @@
     else if (abaAtual === 'materiais') html += renderAbaMateriais(obra, c);
     else if (abaAtual === 'info') html += renderAbaInfo(obra);
     else if (abaAtual === 'relcliente') html += renderAbaRelatorioCliente(obra, c);
-    html += '</div>';
+    html += '</div></div>'; // aba-content + obra-content
 
+    html += '</div>'; // obra-layout
     return html;
   }
-
   function renderAbaResumo(o, c) {
     let html = '';
 
@@ -3866,6 +3959,31 @@
 
 
   // INIT - Pré-cadastra Atmosphera apenas se não houver nenhuma obra
+  function abrirDrawer() {
+    var el = document.getElementById('obra-drawer');
+    var ov = document.getElementById('obra-overlay');
+    if (el) el.classList.add('open');
+    if (ov) ov.classList.add('show');
+    document.body.style.overflow = 'hidden';
+  }
+
+  function fecharDrawer() {
+    var el = document.getElementById('obra-drawer');
+    var ov = document.getElementById('obra-overlay');
+    if (el) el.classList.remove('open');
+    if (ov) ov.classList.remove('show');
+    document.body.style.overflow = '';
+  }
+
+  function trocarAbaMobile(aba) {
+    if (window.innerWidth < 768) {
+      fecharDrawer();
+      setTimeout(function() { trocarAba(aba); }, 250);
+    } else {
+      trocarAba(aba);
+    }
+  }
+
   function inicializarAtmosphera() {
     if (estado.obras.length > 0) return;
     const obraAtmo = {
