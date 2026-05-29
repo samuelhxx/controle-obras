@@ -532,12 +532,12 @@
     box-shadow: var(--shadow-card);
     position: sticky; top: 20px;
     max-height: calc(100vh - 40px); overflow-y: auto; overflow-x: hidden;
-    transition: width 250ms var(--ease), min-width 250ms var(--ease),
-                opacity 200ms ease, margin-right 250ms var(--ease);
+    transition: width 220ms var(--ease), min-width 220ms var(--ease),
+                margin-right 220ms var(--ease);
   }
   .obra-layout.collapsed .obra-sidebar {
     width: 0; min-width: 0; margin-right: 0;
-    opacity: 0; pointer-events: none; overflow: hidden;
+    pointer-events: none; overflow: hidden;
   }
   .sidebar-top {
     display: flex; align-items: center; justify-content: space-between;
@@ -3985,14 +3985,37 @@
   }
 
   function toggleSidebar() {
-    if (window.innerWidth < 768) {
-      abrirDrawer();
-      return;
-    }
+    if (window.innerWidth < 768) { abrirDrawer(); return; }
     var layout = document.getElementById('obra-layout-wrap');
-    if (!layout) return;
-    var collapsed = layout.classList.toggle('collapsed');
-    localStorage.setItem('sidebarCollapsed', collapsed ? '1' : '0');
+    var sidebar = document.getElementById('obra-drawer');
+    if (!layout || !sidebar) return;
+
+    if (!layout.classList.contains('collapsed')) {
+      // Fechar: fade out rápido → depois encolhe (invisível, sem barra branca)
+      sidebar.style.transition = 'opacity 110ms ease';
+      sidebar.style.opacity = '0';
+      setTimeout(function() {
+        layout.classList.add('collapsed');
+        localStorage.setItem('sidebarCollapsed', '1');
+        sidebar.style.transition = '';
+        sidebar.style.opacity = '';
+      }, 115);
+    } else {
+      // Abrir: expande largura → depois fade in
+      layout.classList.remove('collapsed');
+      sidebar.style.opacity = '0';
+      sidebar.style.transition = 'none';
+      void sidebar.offsetWidth; // força reflow
+      setTimeout(function() {
+        sidebar.style.transition = 'opacity 160ms ease';
+        sidebar.style.opacity = '1';
+        localStorage.setItem('sidebarCollapsed', '0');
+        setTimeout(function() {
+          sidebar.style.transition = '';
+          sidebar.style.opacity = '';
+        }, 170);
+      }, 200);
+    }
   }
 
   function trocarAbaMobile(aba) {
