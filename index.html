@@ -476,28 +476,20 @@
   .btn-logout:hover { background:rgba(255,255,255,0.12); color:#fff; border-color:rgba(255,255,255,0.55); }
 
   /* Alertas Inteligentes */
-  .alertas-section { margin-bottom: 20px; }
-  .alertas-lista { display: flex; flex-direction: column; gap: 8px; }
-  .alerta-card { display: flex; align-items: flex-start; gap: 12px; padding: 14px 16px; border-radius: 12px; cursor: pointer; transition: transform 0.15s var(--ease), box-shadow 0.15s ease; border: 1.5px solid transparent; }
-  .alerta-card:hover { transform: translateY(-1px); box-shadow: 0 4px 14px rgba(0,0,0,0.09); }
-  .alerta-card.red   { background: rgba(220,38,38,0.07);  border-color: rgba(220,38,38,0.18); }
-  .alerta-card.amber { background: rgba(217,119,6,0.07);  border-color: rgba(217,119,6,0.18); }
-  .alerta-card.green { background: rgba(5,150,105,0.06);  border-color: rgba(5,150,105,0.15); }
-  .alerta-card.roxo  { background: rgba(115,1,140,0.05);  border-color: rgba(115,1,140,0.14); }
-  .alerta-icone { font-size: 18px; line-height: 1; flex-shrink: 0; margin-top: 1px; }
-  .alerta-corpo { flex: 1; }
-  .alerta-titulo { font-size: 13px; font-weight: 700; color: var(--ink); margin-bottom: 2px; }
-  .alerta-card.red   .alerta-titulo { color: var(--red); }
-  .alerta-card.amber .alerta-titulo { color: var(--amber); }
-  .alerta-card.green .alerta-titulo { color: var(--green); }
-  .alerta-card.roxo  .alerta-titulo { color: var(--purple); }
-  .alerta-sub   { font-size: 12px; color: var(--ink-3); line-height: 1.4; }
-  .alerta-valor { font-size: 12px; font-weight: 700; margin-top: 4px; }
-  .alerta-card.red   .alerta-valor { color: var(--red); }
-  .alerta-card.amber .alerta-valor { color: var(--amber); }
-  .alerta-card.green .alerta-valor { color: var(--green); }
-  .alerta-card.roxo  .alerta-valor { color: var(--purple); }
-  .alertas-ver-mais { font-size: 12px; color: var(--purple); font-weight: 600; cursor: pointer; text-align: center; padding: 8px; display: none; }
+  .alertas-section { margin-bottom: 16px; }
+  .alertas-lista { display: flex; flex-direction: column; gap: 4px; }
+  .alerta-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 9px 12px 9px 14px; border-radius: 8px; border-left: 3px solid; cursor: pointer; transition: opacity 0.15s ease; }
+  .alerta-row:hover { opacity: 0.75; }
+  .alerta-row.red   { background: rgba(220,38,38,0.04);  border-left-color: var(--red); }
+  .alerta-row.amber { background: rgba(217,119,6,0.04);  border-left-color: var(--amber); }
+  .alerta-row.green { background: rgba(5,150,105,0.04);  border-left-color: var(--green); }
+  .alerta-row.roxo  { background: rgba(115,1,140,0.04);  border-left-color: var(--purple); }
+  .alerta-msg { font-size: 13px; font-weight: 500; color: var(--ink-2); flex: 1; }
+  .alerta-val { font-size: 12px; font-weight: 600; color: var(--ink-3); white-space: nowrap; flex-shrink: 0; }
+  .alerta-row.red   .alerta-val { color: var(--red); }
+  .alerta-row.amber .alerta-val { color: var(--amber); }
+  .alerta-row.green .alerta-val { color: var(--green); }
+  .alertas-ver-mais { font-size: 12px; color: var(--purple); font-weight: 600; cursor: pointer; text-align: center; padding: 6px; display: none; }
   .alertas-ver-mais.visivel { display: block; }
   @keyframes highlightPulse {
     0%   { box-shadow: 0 0 0 0 rgba(115,1,140,0.5); }
@@ -505,10 +497,6 @@
     100% { box-shadow: 0 0 0 0 rgba(115,1,140,0); }
   }
   .highlight-pulse { animation: highlightPulse 1.8s ease 2; border-radius: 10px; }
-  [data-theme="dark"] .alerta-card.red   { background: rgba(220,38,38,0.13); }
-  [data-theme="dark"] .alerta-card.amber { background: rgba(217,119,6,0.13); }
-  [data-theme="dark"] .alerta-card.green { background: rgba(5,150,105,0.10); }
-  [data-theme="dark"] .alerta-card.roxo  { background: rgba(115,1,140,0.10); }
 </style>
 </head>
 <body>
@@ -1942,88 +1930,97 @@
     if (obra.status === 'concluida') return alertas;
     const hoje = hojeISO();
 
+    // P1 — Custos acima do contrato
     if (obra.contrato > 0 && c.custoTotal > obra.contrato) {
-      alertas.push({ prioridade: 1, tipo: 'red', icone: '🚨',
+      alertas.push({ prioridade: 1, tipo: 'red',
         titulo: 'Custos acima do contrato',
-        subtitulo: 'Os custos acumulados já superaram o valor do contrato',
-        valor: 'Excedente: ' + brl(c.custoTotal - obra.contrato),
+        valor: brl(c.custoTotal - obra.contrato) + ' de excedente',
         aba: 'resumo', itemId: null });
     }
 
-    if (obra.contrato > 0 && c.margem < 10 && c.custoTotal <= obra.contrato) {
-      alertas.push({ prioridade: 1, tipo: 'red', icone: '⚠️',
-        titulo: 'Margem crítica',
-        subtitulo: 'Lucro previsto está abaixo de 10% do contrato',
-        valor: 'Margem: ' + c.margem.toFixed(1) + '%',
+    // P1 — Margem crítica (< 20%, só conta se há custos reais)
+    if (obra.contrato > 0 && c.custoTotal > 0 && c.margem < 20 && c.custoTotal <= obra.contrato) {
+      alertas.push({ prioridade: 1, tipo: 'red',
+        titulo: 'Margem crítica — ' + c.margem.toFixed(1) + '%',
+        valor: 'Lucro: ' + brl(c.lucro),
         aba: 'resumo', itemId: null });
     }
 
+    // P2 — Prazo vencido ou proximo (<= 7 dias)
     if (obra.dataPrevisao) {
       const diasRestantes = Math.ceil((new Date(obra.dataPrevisao + 'T12:00:00') - new Date(hoje + 'T12:00:00')) / 86400000);
       if (diasRestantes < 0) {
-        alertas.push({ prioridade: 2, tipo: 'amber', icone: '📅',
-          titulo: 'Prazo vencido',
-          subtitulo: 'A data de previsão já passou há ' + Math.abs(diasRestantes) + ' dia(s)',
-          valor: 'Previsto: ' + dateBR(obra.dataPrevisao),
+        const d = Math.abs(diasRestantes);
+        alertas.push({ prioridade: 2, tipo: 'amber',
+          titulo: 'Prazo vencido há ' + d + (d === 1 ? ' dia' : ' dias'),
+          valor: dateBR(obra.dataPrevisao),
           aba: 'resumo', itemId: null });
       } else if (diasRestantes <= 7) {
-        alertas.push({ prioridade: 2, tipo: 'amber', icone: '⏰',
-          titulo: diasRestantes === 0 ? 'Prazo é hoje' : 'Prazo próximo',
-          subtitulo: diasRestantes === 0 ? 'A previsão de término é hoje' : 'Faltam ' + diasRestantes + ' dia(s) para o prazo',
-          valor: 'Previsto: ' + dateBR(obra.dataPrevisao),
+        alertas.push({ prioridade: 2, tipo: 'amber',
+          titulo: diasRestantes === 0 ? 'Prazo é hoje' : 'Prazo em ' + diasRestantes + (diasRestantes === 1 ? ' dia' : ' dias'),
+          valor: dateBR(obra.dataPrevisao),
           aba: 'resumo', itemId: null });
       }
     }
 
-    const empsNaoPagas = (obra.empreitadas || []).filter(function(e) { return !e.pago; });
-    if (empsNaoPagas.length > 0) {
-      const totalPendente = empsNaoPagas.reduce(function(s, e) {
-        const ads = (e.adiantamentos || []).reduce(function(a, x) { return a + Number(x.valor || 0); }, 0);
-        return s + Math.max(0, Number(e.valor || 0) - ads);
-      }, 0);
-      const primeiraEmp = empsNaoPagas[0];
-      alertas.push({ prioridade: 2, tipo: 'amber', icone: '🔨',
-        titulo: empsNaoPagas.length === 1 ? 'Empreitada a pagar' : empsNaoPagas.length + ' empreitadas a pagar',
-        subtitulo: empsNaoPagas.length === 1 ? '"' + primeiraEmp.nome + '" aguarda pagamento do saldo' : 'Saldo total pendente em empreitadas',
-        valor: brl(totalPendente),
-        aba: 'empreitada', itemId: empsNaoPagas.length === 1 ? ('emp-item-' + primeiraEmp.id) : null });
-    }
-
+    // P2 — Recebimentos atrasados (previsto com data < hoje)
     const recbAtrasados = (obra.recebimentos || []).filter(function(r) {
       return r.previsto === true && r.dataPrevista && r.dataPrevista < hoje;
     });
     if (recbAtrasados.length > 0) {
       const totalAtrasado = recbAtrasados.reduce(function(s, r) { return s + Number(r.valor || 0); }, 0);
       const primeiro = recbAtrasados[0];
-      alertas.push({ prioridade: 2, tipo: 'amber', icone: '💰',
-        titulo: recbAtrasados.length === 1 ? 'Recebimento atrasado' : recbAtrasados.length + ' recebimentos atrasados',
-        subtitulo: recbAtrasados.length === 1 ? 'Previsto para ' + dateBR(primeiro.dataPrevista) + ' e não confirmado' : 'Recebimentos previstos não confirmados',
+      const n = recbAtrasados.length;
+      alertas.push({ prioridade: 2, tipo: 'amber',
+        titulo: n === 1 ? 'Recebimento atrasado · prev. ' + dateBR(primeiro.dataPrevista) : n + ' recebimentos atrasados',
         valor: brl(totalAtrasado),
-        aba: 'recebimentos', itemId: recbAtrasados.length === 1 ? ('recb-' + primeiro.id) : null });
+        aba: 'recebimentos', itemId: n === 1 ? ('recb-' + primeiro.id) : null });
     }
 
-    if (obra.contrato > 0 && c.custoTotal > obra.contrato * 0.8 && c.custoTotal <= obra.contrato) {
-      alertas.push({ prioridade: 3, tipo: 'amber', icone: '📊',
-        titulo: 'Custos em 80% do contrato',
-        subtitulo: 'Atenção ao orçamento restante para a obra',
-        valor: brl(obra.contrato - c.custoTotal) + ' de folga',
-        aba: 'resumo', itemId: null });
+    // P2 — Empreitada pendente E obra com prazo vencido
+    if (obra.dataPrevisao && obra.dataPrevisao < hoje) {
+      const empsNaoPagas = (obra.empreitadas || []).filter(function(e) { return !e.pago; });
+      if (empsNaoPagas.length > 0) {
+        const totalPendente = empsNaoPagas.reduce(function(s, e) {
+          const ads = (e.adiantamentos || []).reduce(function(a, x) { return a + Number(x.valor || 0); }, 0);
+          return s + Math.max(0, Number(e.valor || 0) - ads);
+        }, 0);
+        const primeiraEmp = empsNaoPagas[0];
+        const n = empsNaoPagas.length;
+        alertas.push({ prioridade: 2, tipo: 'amber',
+          titulo: n === 1 ? '"' + primeiraEmp.nome + '" pendente e obra vencida' : n + ' empreitadas pendentes e obra vencida',
+          valor: brl(totalPendente),
+          aba: 'empreitada', itemId: n === 1 ? ('emp-item-' + primeiraEmp.id) : null });
+      }
     }
 
-    if (c.saldoReceber > 0 && obra.contrato > 0 && c.saldoReceber > obra.contrato * 0.2) {
-      alertas.push({ prioridade: 4, tipo: 'green', icone: '💵',
-        titulo: 'Saldo a receber',
-        subtitulo: 'Valor do contrato ainda não recebido',
-        valor: brl(c.saldoReceber),
-        aba: 'recebimentos', itemId: null });
+    // P2 — Entrada prevista hoje
+    const recbHoje = (obra.recebimentos || []).filter(function(r) {
+      return r.previsto === true && r.dataPrevista === hoje;
+    });
+    if (recbHoje.length > 0) {
+      const maisMaior = recbHoje.reduce(function(m, r) { return Number(r.valor || 0) > Number(m.valor || 0) ? r : m; }, recbHoje[0]);
+      alertas.push({ prioridade: 2, tipo: 'green',
+        titulo: 'Entrada prevista hoje',
+        valor: brl(maisMaior.valor),
+        aba: 'recebimentos', itemId: 'recb-' + maisMaior.id });
     }
 
-    if ((obra.trabalhadores || []).length === 0) {
-      alertas.push({ prioridade: 4, tipo: 'roxo', icone: '👷',
-        titulo: 'Sem trabalhadores cadastrados',
-        subtitulo: 'Cadastre a equipe para registrar diárias',
-        valor: null,
-        aba: 'equipe', itemId: null });
+    // P3 — Próxima entrada (1–7 dias), só se não há entrada hoje
+    if (recbHoje.length === 0) {
+      const recbProximos = (obra.recebimentos || []).filter(function(r) {
+        if (!r.previsto || !r.dataPrevista || r.dataPrevista <= hoje) return false;
+        const dias = Math.ceil((new Date(r.dataPrevista + 'T12:00:00') - new Date(hoje + 'T12:00:00')) / 86400000);
+        return dias <= 7;
+      });
+      if (recbProximos.length > 0) {
+        const proximo = recbProximos.sort(function(a, b) { return a.dataPrevista < b.dataPrevista ? -1 : 1; })[0];
+        const dias = Math.ceil((new Date(proximo.dataPrevista + 'T12:00:00') - new Date(hoje + 'T12:00:00')) / 86400000);
+        alertas.push({ prioridade: 3, tipo: 'green',
+          titulo: dias === 1 ? 'Entrada prevista amanhã' : 'Próxima entrada em ' + dias + ' dias',
+          valor: brl(proximo.valor),
+          aba: 'recebimentos', itemId: 'recb-' + proximo.id });
+      }
     }
 
     alertas.sort(function(a, b) { return a.prioridade - b.prioridade; });
@@ -2038,13 +2035,10 @@
 
   function _renderAlertaCard(a, i) {
     const onclick = 'navegarParaAlerta(\'' + a.aba + '\',\'' + (a.itemId || '') + '\')';
-    return '<div class="alerta-card ' + a.tipo + '" onclick="' + onclick + '">'
-      + '<div class="alerta-icone">' + a.icone + '</div>'
-      + '<div class="alerta-corpo">'
-      + '<div class="alerta-titulo">' + a.titulo + '</div>'
-      + '<div class="alerta-sub">' + a.subtitulo + '</div>'
-      + (a.valor ? '<div class="alerta-valor">' + a.valor + '</div>' : '')
-      + '</div></div>';
+    return '<div class="alerta-row ' + a.tipo + '" onclick="' + onclick + '">'
+      + '<span class="alerta-msg">' + a.titulo + '</span>'
+      + (a.valor ? '<span class="alerta-val">' + a.valor + '</span>' : '')
+      + '</div>';
   }
 
   function navegarParaAlerta(aba, itemId) {
