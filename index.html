@@ -4429,17 +4429,31 @@
       html += '<div class="lanc-secao"><div class="lanc-secao-titulo">Materiais (' + rev.materiais.length + ')</div>';
       rev.materiais.forEach(function(m, i) {
         if (m.incluir) totalIncluidos++;
+        var qtdVazio = !m.quantidade || Number(m.quantidade) <= 0;
+        var unVazio = !m.unidade || m.unidade.trim() === '';
+        var valVazio = !m.valorUnit || Number(m.valorUnit) <= 0;
+        var incompleto = m.incluir && (qtdVazio || unVazio || valVazio);
         html += '<div class="lanc-item' + (m.incluir ? '' : ' desmarcado') + '" id="lanc-item-materiais-' + i + '">';
         html += '<input type="checkbox" class="lanc-item-check" ' + (m.incluir ? 'checked' : '') + ' onchange="toggleLancItem(\'materiais\',' + i + ',this.checked)">';
         html += '<div class="lanc-item-body">';
         html += '<div class="lanc-item-label">' + escapeHtml(m.nome) + (m.incerto ? ' <span style="color:var(--amber);font-size:11px;">⚠ incerto</span>' : '') + '</div>';
-        html += '<div class="lanc-item-sub">' + m.quantidade + ' ' + (m.unidade || 'un') + ' × ' + brl(m.valorUnit) + '</div>';
+        var subQtd = qtdVazio ? '?' : m.quantidade;
+        var subUn = unVazio ? '?' : m.unidade;
+        html += '<div class="lanc-item-sub">' + subQtd + ' ' + subUn + ' × ' + brl(m.valorUnit) + '</div>';
         html += '<div class="lanc-item-fields">';
         html += '<input type="text" value="' + escapeHtml(m.nome) + '" placeholder="Nome" oninput="setLancItemField(\'materiais\',' + i + ',\'nome\',this.value)" style="flex:1;">';
-        html += '<input type="number" value="' + m.quantidade + '" min="0" oninput="setLancItemField(\'materiais\',' + i + ',\'quantidade\',parseFloat(this.value)||0)" style="width:55px;">';
-        html += '<input type="text" value="' + escapeHtml(m.unidade || 'un') + '" placeholder="Un" oninput="setLancItemField(\'materiais\',' + i + ',\'unidade\',this.value)" style="width:45px;">';
-        html += '<input type="number" value="' + Number(m.valorUnit || 0).toFixed(2) + '" min="0" step="0.01" oninput="setLancItemField(\'materiais\',' + i + ',\'valorUnit\',parseFloat(this.value)||0)" style="width:75px;">';
-        html += '</div></div></div>';
+        html += '<input type="number" value="' + (qtdVazio ? '' : m.quantidade) + '" min="0" placeholder="Qtd" oninput="setLancItemField(\'materiais\',' + i + ',\'quantidade\',parseFloat(this.value)||0)" style="width:55px;' + (qtdVazio ? 'border-color:var(--amber);' : '') + '">';
+        html += '<input type="text" value="' + escapeHtml(m.unidade || '') + '" placeholder="Un" oninput="setLancItemField(\'materiais\',' + i + ',\'unidade\',this.value)" style="width:45px;' + (unVazio ? 'border-color:var(--amber);' : '') + '">';
+        html += '<input type="number" value="' + (valVazio ? '' : Number(m.valorUnit).toFixed(2)) + '" min="0" step="0.01" placeholder="R$" oninput="setLancItemField(\'materiais\',' + i + ',\'valorUnit\',parseFloat(this.value)||0)" style="width:75px;' + (valVazio ? 'border-color:var(--amber);' : '') + '">';
+        html += '</div>';
+        if (incompleto) {
+          var faltam = [];
+          if (qtdVazio) faltam.push('quantidade');
+          if (unVazio) faltam.push('unidade');
+          if (valVazio) faltam.push('valor');
+          html += '<div style="font-size:11px;color:var(--amber);margin-top:5px;">⚠ Preencha ' + faltam.join(' e ') + ' para confirmar este item</div>';
+        }
+        html += '</div></div>';
       });
       html += '</div>';
     }
@@ -4570,9 +4584,12 @@
       + 'REGRAS:\n'
       + '1. Nunca invente valores não mencionados. Se ambíguo → "incerto":true + nota em "incertos".\n'
       + '2. Nomes de trabalhadores → mapear para os cadastrados abaixo (busca aproximada por nome). Se não encontrar, "incerto":true.\n'
-      + '3. Compra com nome+quantidade+valor → "materiais". Apenas valor sem quantidade → "avulsos".\n'
+      + '3. MATERIAL vs AVULSO — regra prioritária:\n'
+      + '   a. Insumo/material de obra (cimento, argamassa, rejunte, tinta, areia, brita, pedra, tubo, conduíte, impermeabilizante, manta, viaplus, azulejo, cerâmica, madeira, ferragem, cola, solvente, EPI, ou qualquer coisa descrita como "material de ...") → SEMPRE em "materiais", mesmo sem quantidade informada. Nesse caso: quantidade:0, unidade:"", incerto:true.\n'
+      + '   b. Despesa operacional (combustível, gasolina, alimentação, almoço, lanche, marmita avulsa, transporte, uber, estacionamento, pedágio, aluguel, taxa, serviço pontual) → "avulsos".\n'
+      + '   c. Dúvida entre material e avulso → usar "materiais" com incerto:true.\n'
       + '4. Execução ou serviço realizado → "diario".\n'
-      + '5. Categorias de gasto: combustivel|alimentacao|material|ferramenta|transporte|outros.\n'
+      + '5. Categorias de gasto AVULSO (somente despesas operacionais, NUNCA materiais de obra): combustivel|alimentacao|ferramenta|transporte|outros.\n'
       + '6. "meio período" ou "meio dia" → periodo:"meio". Padrão → "completo".\n'
       + '7. Adiantamento a empreiteiro → "adiantamentos" com empreitadaId se mapeável.\n\n'
       + 'CONTEXTO DA OBRA:\n' + gerarContextoObra(obra, c) + '\n\n'
@@ -4582,8 +4599,8 @@
       + 'DATA HOJE: ' + hojeISO() + '\n\n'
       + 'FORMATO DE RETORNO (JSON exato, sem markdown, sem texto adicional):\n'
       + '{"diarias":[{"trabId":"","trabNome":"","data":"YYYY-MM-DD","periodo":"completo","marmita":false,"diaria":0,"incerto":false}],'
-      + '"avulsos":[{"categoria":"material","descricao":"","valor":0,"data":"YYYY-MM-DD","incerto":false}],'
-      + '"materiais":[{"nome":"","quantidade":0,"unidade":"un","valorUnit":0,"data":"YYYY-MM-DD","incerto":false}],'
+      + '"avulsos":[{"categoria":"combustivel","descricao":"","valor":0,"data":"YYYY-MM-DD","incerto":false}],'
+      + '"materiais":[{"nome":"","quantidade":0,"unidade":"","valorUnit":0,"data":"YYYY-MM-DD","incerto":false}],'
       + '"diario":[{"data":"YYYY-MM-DD","descricao":"","percentual":null,"etapa":"","incerto":false}],'
       + '"recebimentos":[{"descricao":"","valor":0,"data":"YYYY-MM-DD","incerto":false}],'
       + '"adiantamentos":[{"empreitadaId":"","empreitadaNome":"","descricao":"","valor":0,"data":"YYYY-MM-DD","incerto":false}],'
@@ -4660,6 +4677,20 @@
     });
 
     if (!obra.materiais) obra.materiais = [];
+    var materiaisIncompletos = (rev.materiais || []).filter(function(m) {
+      if (!m.incluir || !m.nome) return false;
+      var qtd = Number(m.quantidade) || 0;
+      var vUnit = Number(m.valorUnit) || 0;
+      return qtd <= 0 || vUnit <= 0;
+    });
+    if (materiaisIncompletos.length > 0) {
+      var lista = materiaisIncompletos.map(function(m) { return '"' + m.nome + '"'; }).join(', ');
+      var prosseguir = confirm(
+        'Os seguintes materiais estão incompletos e NÃO serão gravados:\n' + lista + '\n\n' +
+        'Deseja confirmar os demais itens mesmo assim?\n(Cancele para voltar e preencher os campos em âmbar.)'
+      );
+      if (!prosseguir) return;
+    }
     (rev.materiais || []).forEach(function(m) {
       if (!m.incluir) return;
       var qtd = Number(m.quantidade) || 0;
