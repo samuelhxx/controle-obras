@@ -608,6 +608,31 @@
     .obra-sidebar.open { transform: translateX(0); }
     .btn-drawer-close { display: flex; }
   }
+
+  /* ── Diário de Obra ── */
+  .diario-item { padding:14px 0; border-bottom:1px solid rgba(0,0,0,0.05); }
+  .diario-item:last-child { border-bottom:none; }
+  .diario-item-data { font-size:11px; color:var(--ink-3); font-weight:700; text-transform:uppercase; letter-spacing:0.5px; margin-bottom:4px; }
+  .diario-item-desc { font-size:14px; color:var(--ink); line-height:1.5; margin-bottom:4px; }
+  .diario-badge { font-size:11px; padding:2px 8px; border-radius:100px; background:rgba(115,1,140,0.08); color:var(--purple); font-weight:600; margin-right:4px; display:inline-block; }
+  [data-theme="dark"] .diario-item { border-bottom-color:rgba(255,255,255,0.05); }
+
+  /* ── Lançamento IA ── */
+  .lanc-secao { margin-bottom:20px; }
+  .lanc-secao-titulo { font-size:10px; font-weight:700; color:var(--ink-3); letter-spacing:2px; text-transform:uppercase; padding:8px 0 6px; border-bottom:1px solid rgba(0,0,0,0.06); margin-bottom:10px; }
+  [data-theme="dark"] .lanc-secao-titulo { border-bottom-color:rgba(255,255,255,0.06); }
+  .lanc-item { display:flex; align-items:flex-start; gap:10px; padding:10px 12px; border:1.5px solid rgba(0,0,0,0.07); border-radius:10px; margin-bottom:8px; }
+  .lanc-item.desmarcado { opacity:0.45; }
+  [data-theme="dark"] .lanc-item { border-color:rgba(255,255,255,0.07); }
+  .lanc-item-check { flex-shrink:0; margin-top:3px; width:16px; height:16px; cursor:pointer; accent-color:var(--purple); }
+  .lanc-item-body { flex:1; min-width:0; }
+  .lanc-item-label { font-size:13px; font-weight:600; color:var(--ink); margin-bottom:4px; }
+  .lanc-item-sub { font-size:12px; color:var(--ink-3); margin-bottom:6px; }
+  .lanc-item-fields { display:flex; flex-wrap:wrap; gap:6px; margin-top:6px; }
+  .lanc-item-fields input, .lanc-item-fields select { font-size:12px; padding:5px 8px; border-radius:7px; border:1px solid rgba(0,0,0,0.12); background:var(--bg); color:var(--ink); font-family:inherit; width:auto; }
+  .lanc-incerto { background:rgba(217,119,6,0.07); border:1.5px solid rgba(217,119,6,0.2); border-radius:10px; padding:8px 12px; margin-bottom:6px; font-size:12px; color:var(--amber); }
+  .sidebar-item-destaque { font-weight:700 !important; color:var(--purple) !important; }
+  .sidebar-item-destaque.active { background:rgba(115,1,140,0.10) !important; }
 </style>
 </head>
 <body>
@@ -658,7 +683,12 @@
   let relatorioTrabId = 'todos';
   let recebimentoModo = 'recebido';
   let materialEditandoId = null;
-
+  let diarioEditandoId   = null;
+  let diarioMes          = hojeISO().substring(0, 7);
+  let diarioQuinzena     = new Date().getDate() <= 15 ? 1 : 2;
+  let lancamentoEstado   = 'entrada';
+  let lancamentoTexto    = '';
+  let lancamentoRevisao  = null;
 
   function carregar() {
     try {
@@ -699,6 +729,7 @@
       // Campos de funcionalidades novas
       if (!o.info) o.info = {};
       if (!o.materiais) o.materiais = [];
+      if (!o.diario) o.diario = [];
 
       // Diárias antigas: garantir campo periodo
       if (o.diarias) {
@@ -874,6 +905,7 @@
 
     const abas = [
       ['resumo',      'Resumo'],
+      ['lancamento',  '⚡ Lançar'],
       ['info',        'Informações'],
       ['relcliente',  'Cliente'],
       ['diarias',     'Diárias'],
@@ -881,6 +913,7 @@
       ['empreitada',  'Empreitada'],
       ['materiais',   'Materiais'],
       ['recebimentos','Recebimentos'],
+      ['diario',      'Diário de Obra'],
       ['historico',   'Histórico'],
       ['grafico',     'Gráfico'],
       ['equipe',      'Equipe'],
@@ -926,6 +959,8 @@
     else if (abaAtual === 'materiais') html += renderAbaMateriais(obra, c);
     else if (abaAtual === 'info') html += renderAbaInfo(obra);
     else if (abaAtual === 'relcliente') html += renderAbaRelatorioCliente(obra, c);
+    else if (abaAtual === 'diario') html += renderAbaDiario(obra);
+    else if (abaAtual === 'lancamento') html += renderAbaLancamento(obra, c);
     html += '</div></div>'; // aba-content + obra-content
 
     html += '</div>'; // obra-layout
@@ -1504,6 +1539,10 @@
     abaAtual = aba;
     selecaoDiaria = {};
     materialEditandoId = null;
+    diarioEditandoId   = null;
+    lancamentoEstado   = 'entrada';
+    lancamentoRevisao  = null;
+    lancamentoTexto    = '';
     render();
     window.scrollTo(0, 0);
   }
@@ -4032,6 +4071,666 @@
     }
   }
 
+  // ═══════════════════════════════════════════════════════════
+  // DIÁRIO DE OBRA
+  // ═══════════════════════════════════════════════════════════
+
+  function renderAbaDiario(obra) {
+    var diarios = (obra.diario || []);
+    var hoje = hojeISO();
+    var editando = diarioEditandoId ? diarios.find(function(d) { return d.id === diarioEditandoId; }) : null;
+
+    var html = '<div class="two-col-layout">';
+
+    // Col esquerda: formulário
+    html += '<div><div class="card">';
+    html += '<div class="card-title">' + (editando ? 'EDITAR REGISTRO' : 'NOVO REGISTRO') + '</div>';
+
+    html += '<label class="form-label">Data *</label>';
+    html += '<input type="date" id="diario-data" value="' + (editando ? editando.data : hoje) + '">';
+
+    html += '<label class="form-label">Descrição *</label>';
+    html += '<textarea id="diario-desc" rows="4" placeholder="Descreva as atividades realizadas...">' + escapeHtml(editando ? editando.descricao : '') + '</textarea>';
+
+    html += '<label class="form-label">% de andamento <span style="color:var(--ink-3);font-weight:400;">(opcional)</span></label>';
+    var pctVal = (editando && editando.percentual !== null && editando.percentual !== undefined) ? editando.percentual : '';
+    html += '<input type="number" id="diario-pct" min="0" max="100" placeholder="Ex: 65" value="' + pctVal + '">';
+
+    html += '<label class="form-label">Etapa / fase <span style="color:var(--ink-3);font-weight:400;">(opcional)</span></label>';
+    html += '<input type="text" id="diario-etapa" placeholder="Ex: Impermeabilização" value="' + escapeHtml(editando ? (editando.etapa || '') : '') + '">';
+
+    if (editando) {
+      html += '<button class="btn-primary" onclick="salvarRegistroDiario()">Atualizar Registro</button>';
+      html += '<button class="btn-secondary" onclick="cancelarEdicaoDiario()" style="margin-top:8px;">Cancelar</button>';
+    } else {
+      html += '<button class="btn-primary" onclick="salvarRegistroDiario()">Salvar Registro</button>';
+    }
+    html += '</div></div>';
+
+    // Col direita: lista
+    html += '<div><div class="card">';
+    html += '<div class="card-title">REGISTROS (' + diarios.length + ')</div>';
+
+    html += '<div style="display:flex;gap:8px;margin-bottom:10px;">';
+    html += '<button class="rel-quinzena-pill' + (diarioQuinzena === 1 ? ' active' : '') + '" data-q="1" onclick="setDiarioQuinzena(1)">1ª Quinzena</button>';
+    html += '<button class="rel-quinzena-pill' + (diarioQuinzena === 2 ? ' active' : '') + '" data-q="2" onclick="setDiarioQuinzena(2)">2ª Quinzena</button>';
+    html += '</div>';
+
+    html += '<input type="month" value="' + diarioMes + '" onchange="diarioMes=this.value;render();" style="width:100%;margin-bottom:14px;">';
+
+    var parts = diarioMes.split('-');
+    var ano = Number(parts[0]), mesNum = Number(parts[1]);
+    var diaFim = diarioQuinzena === 1 ? 15 : new Date(ano, mesNum, 0).getDate();
+    var isoInicio = diarioMes + '-' + (diarioQuinzena === 1 ? '01' : '16');
+    var isoFim = diarioMes + '-' + String(diaFim).padStart(2, '0');
+    var filtrados = diarios
+      .filter(function(d) { return d.data >= isoInicio && d.data <= isoFim; })
+      .sort(function(a, b) { return b.data.localeCompare(a.data); });
+
+    if (filtrados.length === 0) {
+      html += '<div style="color:var(--ink-3);font-size:14px;text-align:center;padding:20px 0;">Nenhum registro neste período.</div>';
+    } else {
+      filtrados.forEach(function(d) {
+        html += '<div class="diario-item">';
+        html += '<div class="diario-item-data">' + dateBR(d.data) + '</div>';
+        html += '<div class="diario-item-desc">' + escapeHtml(d.descricao) + '</div>';
+        if (d.percentual !== null && d.percentual !== undefined && d.percentual !== '') {
+          html += '<span class="diario-badge">' + d.percentual + '%</span>';
+        }
+        if (d.etapa) {
+          html += '<span class="diario-badge">' + escapeHtml(d.etapa) + '</span>';
+        }
+        html += '<div style="margin-top:8px;display:flex;gap:6px;">';
+        html += '<button class="btn-secondary" style="padding:4px 10px;font-size:12px;width:auto;margin-top:0;" onclick="editarRegistroDiario(\'' + d.id + '\')">Editar</button>';
+        html += '<button class="btn-secondary" style="padding:4px 10px;font-size:12px;width:auto;margin-top:0;color:var(--red);border-color:rgba(220,38,38,0.3);" onclick="removerRegistroDiario(\'' + d.id + '\')">×</button>';
+        html += '</div>';
+        html += '</div>';
+      });
+    }
+
+    html += '<button class="btn-secondary" onclick="gerarPDFDiario()" style="margin-top:12px;font-size:13px;">Exportar PDF do Diário</button>';
+    html += '</div></div>';
+
+    html += '</div>';
+    return html;
+  }
+
+  function salvarRegistroDiario() {
+    var obra = getObra(obraAtualId);
+    if (!obra) return;
+    var data = document.getElementById('diario-data').value;
+    var descricao = (document.getElementById('diario-desc').value || '').trim();
+    var pctRaw = document.getElementById('diario-pct').value;
+    var etapa = (document.getElementById('diario-etapa').value || '').trim();
+    if (!data) { alert('Informe a data.'); return; }
+    if (!descricao) { alert('A descrição é obrigatória.'); return; }
+    var percentual = pctRaw !== '' ? Math.min(100, Math.max(0, Number(pctRaw))) : null;
+    if (!obra.diario) obra.diario = [];
+    if (diarioEditandoId) {
+      var idx = obra.diario.findIndex(function(d) { return d.id === diarioEditandoId; });
+      if (idx !== -1) {
+        obra.diario[idx].data = data;
+        obra.diario[idx].descricao = descricao;
+        obra.diario[idx].percentual = percentual;
+        obra.diario[idx].etapa = etapa;
+      }
+      diarioEditandoId = null;
+      toast('Registro atualizado');
+    } else {
+      obra.diario.push({
+        id: 'diario_' + Date.now() + '_' + Math.random().toString(36).slice(2,5),
+        data: data, descricao: descricao, percentual: percentual, etapa: etapa,
+        criadoEm: new Date().toISOString()
+      });
+      toast('Registro salvo');
+    }
+    salvar();
+    render();
+  }
+
+  function removerRegistroDiario(id) {
+    if (!confirm('Remover este registro do diário?')) return;
+    var obra = getObra(obraAtualId);
+    if (!obra) return;
+    obra.diario = (obra.diario || []).filter(function(d) { return d.id !== id; });
+    salvar(); render();
+    toast('Registro removido');
+  }
+
+  function editarRegistroDiario(id) {
+    diarioEditandoId = id;
+    render();
+    window.scrollTo(0, 0);
+  }
+
+  function cancelarEdicaoDiario() {
+    diarioEditandoId = null;
+    render();
+  }
+
+  function setDiarioQuinzena(q) {
+    diarioQuinzena = q;
+    render();
+  }
+
+  function gerarPDFDiario() {
+    var obra = getObra(obraAtualId);
+    if (!obra) return;
+    if (window.jspdf) {
+      _gerarPDFDiario(obra);
+    } else {
+      var s = document.createElement('script');
+      s.src = 'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js';
+      s.onload = function() { _gerarPDFDiario(obra); };
+      document.head.appendChild(s);
+    }
+  }
+
+  function _gerarPDFDiario(obra) {
+    var jsPDF = window.jspdf.jsPDF;
+    var doc = new jsPDF({ unit: 'mm', format: 'a4' });
+    var PW = 210, PH = 297, ML = 16, MR = 16;
+    var todayStr = new Date().toLocaleDateString('pt-BR');
+    var nomeMes = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
+    var partes = diarioMes.split('-');
+    var anoNum = Number(partes[0]), mesIdx = Number(partes[1]) - 1;
+    var periodoLabel = (diarioQuinzena === 1 ? '1ª Quinzena' : '2ª Quinzena') + ' — ' + nomeMes[mesIdx] + '/' + anoNum;
+    var pageNum = 1;
+
+    function headerPage(n) {
+      doc.setFillColor(115, 1, 140);
+      doc.rect(0, 0, PW, 28, 'F');
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(11);
+      doc.setTextColor(255, 255, 255);
+      doc.text('AS CONSTRUCTION', ML, 12);
+      doc.setFontSize(9);
+      doc.setFont('helvetica', 'normal');
+      doc.text('Diário de Obra', ML, 19);
+      doc.text('Pág. ' + n, PW - MR, 19, { align: 'right' });
+    }
+
+    headerPage(pageNum);
+    var y = 36;
+
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(9);
+    doc.setTextColor(100, 100, 100);
+    doc.text('Obra:', ML, y);
+    doc.setTextColor(20, 20, 20);
+    doc.setFont('helvetica', 'bold');
+    doc.text(obra.nome, ML + 16, y);
+    y += 5;
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(100, 100, 100);
+    doc.text('Cliente:', ML, y);
+    doc.setTextColor(20, 20, 20);
+    doc.text(obra.cliente || 'Não informado', ML + 16, y);
+    y += 5;
+    doc.setTextColor(100, 100, 100);
+    doc.text('Período:', ML, y);
+    doc.setTextColor(20, 20, 20);
+    doc.text(periodoLabel, ML + 16, y);
+    y += 7;
+
+    doc.setDrawColor(200, 200, 200);
+    doc.line(ML, y, PW - MR, y);
+    y += 6;
+
+    var diaFimFilt = diarioQuinzena === 1 ? 15 : new Date(anoNum, mesIdx + 1, 0).getDate();
+    var isoInicioFilt = diarioMes + '-' + (diarioQuinzena === 1 ? '01' : '16');
+    var isoFimFilt = diarioMes + '-' + String(diaFimFilt).padStart(2, '0');
+    var registros = (obra.diario || [])
+      .filter(function(d) { return d.data >= isoInicioFilt && d.data <= isoFimFilt; })
+      .sort(function(a, b) { return b.data.localeCompare(a.data); });
+
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(8);
+    doc.setTextColor(120, 120, 120);
+    doc.text('DATA', ML, y);
+    doc.text('DESCRIÇÃO', ML + 22, y);
+    doc.text('%', ML + 140, y);
+    doc.text('ETAPA', ML + 150, y);
+    y += 4;
+    doc.setDrawColor(200, 200, 200);
+    doc.line(ML, y, PW - MR, y);
+    y += 5;
+
+    if (registros.length === 0) {
+      doc.setFont('helvetica', 'italic');
+      doc.setFontSize(10);
+      doc.setTextColor(150, 150, 150);
+      doc.text('Nenhum registro neste período.', ML, y);
+    } else {
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(9);
+      registros.forEach(function(d) {
+        var descLines = doc.splitTextToSize(d.descricao, 112);
+        var lineH = Math.max(6, descLines.length * 4.5);
+        if (y + lineH > PH - 20) {
+          doc.setFontSize(8); doc.setTextColor(150, 150, 150);
+          doc.text('Gerado em ' + todayStr + ' — AS Construction', PW / 2, PH - 8, { align: 'center' });
+          doc.addPage();
+          pageNum++;
+          headerPage(pageNum);
+          y = 36;
+          doc.setFont('helvetica', 'normal'); doc.setFontSize(9);
+        }
+        doc.setTextColor(20, 20, 20);
+        doc.text(dateBR(d.data), ML, y);
+        doc.text(descLines, ML + 22, y);
+        if (d.percentual !== null && d.percentual !== undefined && d.percentual !== '') {
+          doc.setTextColor(115, 1, 140);
+          doc.setFont('helvetica', 'bold');
+          doc.text(String(d.percentual) + '%', ML + 140, y);
+          doc.setFont('helvetica', 'normal');
+          doc.setTextColor(20, 20, 20);
+        }
+        if (d.etapa) {
+          var etapaLines = doc.splitTextToSize(d.etapa, 38);
+          doc.text(etapaLines, ML + 150, y);
+        }
+        y += lineH;
+        doc.setDrawColor(235, 235, 235);
+        doc.line(ML, y, PW - MR, y);
+        y += 3;
+      });
+    }
+
+    doc.setFontSize(8); doc.setTextColor(150, 150, 150);
+    doc.text('Gerado em ' + todayStr + ' — AS Construction', PW / 2, PH - 8, { align: 'center' });
+
+    var slugObra = obra.nome.toLowerCase().replace(/[^a-z0-9]+/g, '-').slice(0, 30);
+    doc.save('diario-' + slugObra + '-' + diarioMes + '-Q' + diarioQuinzena + '.pdf');
+  }
+
+  // ═══════════════════════════════════════════════════════════
+  // ASSISTENTE DE LANÇAMENTO POR IA
+  // ═══════════════════════════════════════════════════════════
+
+  function renderAbaLancamento(obra, c) {
+    if (lancamentoEstado === 'carregando') {
+      return '<div class="card" style="text-align:center;padding:40px 24px;">'
+        + '<div class="chat-loading" style="justify-content:center;margin-bottom:12px;"><span></span><span></span><span></span></div>'
+        + '<div style="color:var(--ink-3);font-size:14px;">Interpretando seu relato...</div>'
+        + '</div>';
+    }
+
+    if (lancamentoEstado === 'gravado') {
+      return _renderLancamentoGravado();
+    }
+
+    if (lancamentoEstado === 'revisao' && lancamentoRevisao) {
+      return _renderLancamentoRevisao(obra);
+    }
+
+    return '<div class="card">'
+      + '<div class="card-title">LANÇAMENTO RÁPIDO — IA</div>'
+      + '<p style="font-size:13px;color:var(--ink-3);margin-bottom:14px;">Descreva o dia em texto livre. A IA interpreta e mostra o que vai lançar — você confirma antes de gravar.</p>'
+      + '<textarea id="lanc-input" rows="5" placeholder="Ex: Carlos e Emerson trabalharam com marmita. Comprei 80 reais de impermeabilização. Removemos 100% do rejunte das piscinas." style="width:100%;">' + escapeHtml(lancamentoTexto) + '</textarea>'
+      + '<button class="btn-primary" onclick="interpretarLancamento()">Interpretar →</button>'
+      + '<button class="btn-secondary" onclick="lancamentoTexto=\'\';var el=document.getElementById(\'lanc-input\');if(el)el.value=\'\';" style="margin-top:8px;">Limpar</button>'
+      + '<p style="font-size:11px;color:var(--ink-3);margin-top:10px;text-align:center;">A IA nunca grava sem sua confirmação.</p>'
+      + '</div>';
+  }
+
+  function _renderLancamentoRevisao(obra) {
+    var rev = lancamentoRevisao;
+    var html = '<div class="card">';
+    html += '<div class="card-title">REVISE ANTES DE LANÇAR</div>';
+    html += '<p style="font-size:13px;color:var(--ink-3);margin-bottom:16px;">Desmarque itens que não quiser. Edite valores se necessário.</p>';
+
+    var totalIncluidos = 0;
+
+    if (rev.diarias && rev.diarias.length > 0) {
+      html += '<div class="lanc-secao"><div class="lanc-secao-titulo">Diárias (' + rev.diarias.length + ')</div>';
+      rev.diarias.forEach(function(d, i) {
+        if (d.incluir) totalIncluidos++;
+        html += '<div class="lanc-item' + (d.incluir ? '' : ' desmarcado') + '" id="lanc-item-diarias-' + i + '">';
+        html += '<input type="checkbox" class="lanc-item-check" ' + (d.incluir ? 'checked' : '') + ' onchange="toggleLancItem(\'diarias\',' + i + ',this.checked)">';
+        html += '<div class="lanc-item-body">';
+        html += '<div class="lanc-item-label">' + escapeHtml(d.trabNome || 'Trabalhador') + (d.incerto ? ' <span style="color:var(--amber);font-size:11px;">⚠ incerto</span>' : '') + '</div>';
+        html += '<div class="lanc-item-sub">' + dateBR(d.data) + ' · ' + (d.periodo === 'meio' ? 'Meio período' : 'Período completo') + (d.marmita ? ' · Com marmita' : '') + '</div>';
+        html += '<div class="lanc-item-fields">';
+        html += '<input type="date" value="' + (d.data || hojeISO()) + '" oninput="setLancItemField(\'diarias\',' + i + ',\'data\',this.value)">';
+        html += '<select oninput="setLancItemField(\'diarias\',' + i + ',\'periodo\',this.value)">';
+        html += '<option value="completo"' + (d.periodo !== 'meio' ? ' selected' : '') + '>Completo</option>';
+        html += '<option value="meio"' + (d.periodo === 'meio' ? ' selected' : '') + '>Meio período</option>';
+        html += '</select>';
+        html += '<label style="display:flex;align-items:center;gap:4px;font-size:12px;color:var(--ink-2);"><input type="checkbox" ' + (d.marmita ? 'checked' : '') + ' onchange="setLancItemField(\'diarias\',' + i + ',\'marmita\',this.checked)"> Marmita</label>';
+        html += '</div></div></div>';
+      });
+      html += '</div>';
+    }
+
+    if (rev.avulsos && rev.avulsos.length > 0) {
+      html += '<div class="lanc-secao"><div class="lanc-secao-titulo">Gastos Avulsos (' + rev.avulsos.length + ')</div>';
+      rev.avulsos.forEach(function(a, i) {
+        if (a.incluir) totalIncluidos++;
+        html += '<div class="lanc-item' + (a.incluir ? '' : ' desmarcado') + '" id="lanc-item-avulsos-' + i + '">';
+        html += '<input type="checkbox" class="lanc-item-check" ' + (a.incluir ? 'checked' : '') + ' onchange="toggleLancItem(\'avulsos\',' + i + ',this.checked)">';
+        html += '<div class="lanc-item-body">';
+        html += '<div class="lanc-item-label">' + escapeHtml(a.descricao || a.categoria || 'Gasto') + (a.incerto ? ' <span style="color:var(--amber);font-size:11px;">⚠ incerto</span>' : '') + '</div>';
+        html += '<div class="lanc-item-sub">' + dateBR(a.data) + ' · ' + brl(a.valor) + '</div>';
+        html += '<div class="lanc-item-fields">';
+        html += '<select oninput="setLancItemField(\'avulsos\',' + i + ',\'categoria\',this.value)">';
+        ['combustivel','alimentacao','material','ferramenta','transporte','outros'].forEach(function(cat) {
+          html += '<option value="' + cat + '"' + (a.categoria === cat ? ' selected' : '') + '>' + getCategoriaNome(cat) + '</option>';
+        });
+        html += '</select>';
+        html += '<input type="text" value="' + escapeHtml(a.descricao || '') + '" placeholder="Descrição" oninput="setLancItemField(\'avulsos\',' + i + ',\'descricao\',this.value)" style="flex:1;">';
+        html += '<input type="number" value="' + Number(a.valor || 0).toFixed(2) + '" min="0" step="0.01" oninput="setLancItemField(\'avulsos\',' + i + ',\'valor\',parseFloat(this.value)||0)" style="width:80px;">';
+        html += '</div></div></div>';
+      });
+      html += '</div>';
+    }
+
+    if (rev.materiais && rev.materiais.length > 0) {
+      html += '<div class="lanc-secao"><div class="lanc-secao-titulo">Materiais (' + rev.materiais.length + ')</div>';
+      rev.materiais.forEach(function(m, i) {
+        if (m.incluir) totalIncluidos++;
+        html += '<div class="lanc-item' + (m.incluir ? '' : ' desmarcado') + '" id="lanc-item-materiais-' + i + '">';
+        html += '<input type="checkbox" class="lanc-item-check" ' + (m.incluir ? 'checked' : '') + ' onchange="toggleLancItem(\'materiais\',' + i + ',this.checked)">';
+        html += '<div class="lanc-item-body">';
+        html += '<div class="lanc-item-label">' + escapeHtml(m.nome) + (m.incerto ? ' <span style="color:var(--amber);font-size:11px;">⚠ incerto</span>' : '') + '</div>';
+        html += '<div class="lanc-item-sub">' + m.quantidade + ' ' + (m.unidade || 'un') + ' × ' + brl(m.valorUnit) + '</div>';
+        html += '<div class="lanc-item-fields">';
+        html += '<input type="text" value="' + escapeHtml(m.nome) + '" placeholder="Nome" oninput="setLancItemField(\'materiais\',' + i + ',\'nome\',this.value)" style="flex:1;">';
+        html += '<input type="number" value="' + m.quantidade + '" min="0" oninput="setLancItemField(\'materiais\',' + i + ',\'quantidade\',parseFloat(this.value)||0)" style="width:55px;">';
+        html += '<input type="text" value="' + escapeHtml(m.unidade || 'un') + '" placeholder="Un" oninput="setLancItemField(\'materiais\',' + i + ',\'unidade\',this.value)" style="width:45px;">';
+        html += '<input type="number" value="' + Number(m.valorUnit || 0).toFixed(2) + '" min="0" step="0.01" oninput="setLancItemField(\'materiais\',' + i + ',\'valorUnit\',parseFloat(this.value)||0)" style="width:75px;">';
+        html += '</div></div></div>';
+      });
+      html += '</div>';
+    }
+
+    if (rev.diario && rev.diario.length > 0) {
+      html += '<div class="lanc-secao"><div class="lanc-secao-titulo">Diário de Obra (' + rev.diario.length + ')</div>';
+      rev.diario.forEach(function(d, i) {
+        if (d.incluir) totalIncluidos++;
+        html += '<div class="lanc-item' + (d.incluir ? '' : ' desmarcado') + '" id="lanc-item-diario-' + i + '">';
+        html += '<input type="checkbox" class="lanc-item-check" ' + (d.incluir ? 'checked' : '') + ' onchange="toggleLancItem(\'diario\',' + i + ',this.checked)">';
+        html += '<div class="lanc-item-body">';
+        html += '<div class="lanc-item-label">' + dateBR(d.data) + (d.percentual !== null && d.percentual !== undefined ? ' · ' + d.percentual + '%' : '') + (d.etapa ? ' · ' + escapeHtml(d.etapa) : '') + (d.incerto ? ' <span style="color:var(--amber);font-size:11px;">⚠ incerto</span>' : '') + '</div>';
+        html += '<div class="lanc-item-sub">' + escapeHtml(d.descricao) + '</div>';
+        html += '<div class="lanc-item-fields">';
+        html += '<input type="text" value="' + escapeHtml(d.descricao) + '" placeholder="Descrição" oninput="setLancItemField(\'diario\',' + i + ',\'descricao\',this.value)" style="flex:1;">';
+        var pctV = (d.percentual !== undefined && d.percentual !== null) ? d.percentual : '';
+        html += '<input type="number" value="' + pctV + '" min="0" max="100" placeholder="%" oninput="setLancItemField(\'diario\',' + i + ',\'percentual\',this.value===\'\'?null:Number(this.value))" style="width:50px;">';
+        html += '<input type="text" value="' + escapeHtml(d.etapa || '') + '" placeholder="Etapa" oninput="setLancItemField(\'diario\',' + i + ',\'etapa\',this.value)" style="width:90px;">';
+        html += '</div></div></div>';
+      });
+      html += '</div>';
+    }
+
+    if (rev.recebimentos && rev.recebimentos.length > 0) {
+      html += '<div class="lanc-secao"><div class="lanc-secao-titulo">Recebimentos (' + rev.recebimentos.length + ')</div>';
+      rev.recebimentos.forEach(function(r, i) {
+        if (r.incluir) totalIncluidos++;
+        html += '<div class="lanc-item' + (r.incluir ? '' : ' desmarcado') + '" id="lanc-item-recebimentos-' + i + '">';
+        html += '<input type="checkbox" class="lanc-item-check" ' + (r.incluir ? 'checked' : '') + ' onchange="toggleLancItem(\'recebimentos\',' + i + ',this.checked)">';
+        html += '<div class="lanc-item-body">';
+        html += '<div class="lanc-item-label">' + escapeHtml(r.descricao || 'Recebimento') + (r.incerto ? ' <span style="color:var(--amber);font-size:11px;">⚠ incerto</span>' : '') + '</div>';
+        html += '<div class="lanc-item-sub">' + dateBR(r.data) + ' · ' + brl(r.valor) + '</div>';
+        html += '<div class="lanc-item-fields">';
+        html += '<input type="text" value="' + escapeHtml(r.descricao || '') + '" placeholder="Descrição" oninput="setLancItemField(\'recebimentos\',' + i + ',\'descricao\',this.value)" style="flex:1;">';
+        html += '<input type="number" value="' + Number(r.valor || 0).toFixed(2) + '" min="0" step="0.01" oninput="setLancItemField(\'recebimentos\',' + i + ',\'valor\',parseFloat(this.value)||0)" style="width:90px;">';
+        html += '</div></div></div>';
+      });
+      html += '</div>';
+    }
+
+    if (rev.adiantamentos && rev.adiantamentos.length > 0) {
+      html += '<div class="lanc-secao"><div class="lanc-secao-titulo">Adiantamentos (' + rev.adiantamentos.length + ')</div>';
+      rev.adiantamentos.forEach(function(a, i) {
+        if (a.incluir) totalIncluidos++;
+        html += '<div class="lanc-item' + (a.incluir ? '' : ' desmarcado') + '" id="lanc-item-adiantamentos-' + i + '">';
+        html += '<input type="checkbox" class="lanc-item-check" ' + (a.incluir ? 'checked' : '') + ' onchange="toggleLancItem(\'adiantamentos\',' + i + ',this.checked)">';
+        html += '<div class="lanc-item-body">';
+        html += '<div class="lanc-item-label">' + escapeHtml(a.empreitadaNome || 'Empreiteiro') + (a.incerto ? ' <span style="color:var(--amber);font-size:11px;">⚠ incerto</span>' : '') + '</div>';
+        html += '<div class="lanc-item-sub">' + dateBR(a.data) + ' · ' + brl(a.valor) + '</div>';
+        html += '<div class="lanc-item-fields">';
+        html += '<input type="text" value="' + escapeHtml(a.descricao || 'Adiantamento') + '" placeholder="Descrição" oninput="setLancItemField(\'adiantamentos\',' + i + ',\'descricao\',this.value)" style="flex:1;">';
+        html += '<input type="number" value="' + Number(a.valor || 0).toFixed(2) + '" min="0" step="0.01" oninput="setLancItemField(\'adiantamentos\',' + i + ',\'valor\',parseFloat(this.value)||0)" style="width:90px;">';
+        html += '</div></div></div>';
+      });
+      html += '</div>';
+    }
+
+    if (rev.incertos && rev.incertos.length > 0) {
+      html += '<div class="lanc-secao"><div class="lanc-secao-titulo">Itens incertos — não serão lançados</div>';
+      rev.incertos.forEach(function(txt) {
+        html += '<div class="lanc-incerto">' + escapeHtml(String(txt)) + '</div>';
+      });
+      html += '</div>';
+    }
+
+    if (totalIncluidos === 0 && (!rev.diarias || !rev.diarias.length) && (!rev.avulsos || !rev.avulsos.length) && (!rev.materiais || !rev.materiais.length) && (!rev.diario || !rev.diario.length) && (!rev.recebimentos || !rev.recebimentos.length) && (!rev.adiantamentos || !rev.adiantamentos.length)) {
+      html += '<div style="color:var(--ink-3);text-align:center;padding:16px;font-size:14px;">Nenhum item interpretado no relato.</div>';
+    }
+
+    html += '<div style="border-top:1px solid rgba(0,0,0,0.06);margin-top:16px;padding-top:14px;display:flex;gap:8px;flex-wrap:wrap;">';
+    html += '<button class="btn-primary" onclick="confirmarLancamento()" style="flex:1;margin-top:0;">Confirmar e Lançar (' + totalIncluidos + ' itens)</button>';
+    html += '<button class="btn-secondary" onclick="cancelarLancamento()" style="width:auto;margin-top:0;">Cancelar</button>';
+    html += '</div>';
+    html += '</div>';
+    return html;
+  }
+
+  function _renderLancamentoGravado() {
+    var rev = lancamentoRevisao || {};
+    var conts = [];
+    var d = (rev.diarias || []).filter(function(x){ return x.incluir; }).length;
+    var a = (rev.avulsos || []).filter(function(x){ return x.incluir; }).length;
+    var m = (rev.materiais || []).filter(function(x){ return x.incluir; }).length;
+    var di = (rev.diario || []).filter(function(x){ return x.incluir; }).length;
+    var r = (rev.recebimentos || []).filter(function(x){ return x.incluir; }).length;
+    var ad = (rev.adiantamentos || []).filter(function(x){ return x.incluir; }).length;
+    if (d) conts.push(d + ' diária' + (d > 1 ? 's' : ''));
+    if (a) conts.push(a + ' gasto' + (a > 1 ? 's' : ''));
+    if (m) conts.push(m + ' material' + (m > 1 ? 'is' : ''));
+    if (di) conts.push(di + ' registro' + (di > 1 ? 's no diário' : ' no diário'));
+    if (r) conts.push(r + ' recebimento' + (r > 1 ? 's' : ''));
+    if (ad) conts.push(ad + ' adiantamento' + (ad > 1 ? 's' : ''));
+    return '<div class="card" style="text-align:center;padding:32px 24px;">'
+      + '<div style="font-size:18px;font-weight:700;color:var(--purple);margin-bottom:10px;">Lançado com sucesso!</div>'
+      + (conts.length > 0 ? '<div style="font-size:14px;color:var(--ink-2);margin-bottom:20px;">' + conts.join(', ') + '</div>' : '')
+      + '<button class="btn-primary" onclick="trocarAba(\'resumo\')" style="margin-bottom:8px;">Ver Resumo</button>'
+      + '<button class="btn-secondary" onclick="novoLancamento()">Novo Lançamento</button>'
+      + '</div>';
+  }
+
+  async function interpretarLancamento() {
+    var textarea = document.getElementById('lanc-input');
+    var texto = textarea ? textarea.value.trim() : '';
+    if (!texto) { alert('Digite um relato antes de interpretar.'); return; }
+    lancamentoTexto = texto;
+
+    var apiKey = localStorage.getItem(KEY_IA);
+    if (!apiKey) { abrirModalChaveIA(); return; }
+
+    if (!window._anthropicSend) {
+      alert('SDK ainda carregando — aguarde e tente novamente.'); return;
+    }
+
+    var obra = getObra(obraAtualId);
+    if (!obra) return;
+    var c = calcularObra(obra);
+
+    var trabCtx = (obra.trabalhadores || []).length > 0
+      ? obra.trabalhadores.map(function(t) { return t.id + ' | ' + t.nome + ' | R$' + t.diaria + '/dia'; }).join('\n')
+      : 'Nenhum trabalhador cadastrado.';
+
+    var empCtx = (obra.empreitadas || []).length > 0
+      ? obra.empreitadas.map(function(e) { return e.id + ' | ' + e.nome; }).join('\n')
+      : 'Nenhuma empreitada cadastrada.';
+
+    var system = 'Você é um assistente de lançamento para o app AS Construction.\n'
+      + 'Interprete o relato do dia em linguagem natural e retorne APENAS JSON válido (sem markdown, sem comentários).\n\n'
+      + 'REGRAS:\n'
+      + '1. Nunca invente valores não mencionados. Se ambíguo → "incerto":true + nota em "incertos".\n'
+      + '2. Nomes de trabalhadores → mapear para os cadastrados abaixo (busca aproximada por nome). Se não encontrar, "incerto":true.\n'
+      + '3. Compra com nome+quantidade+valor → "materiais". Apenas valor sem quantidade → "avulsos".\n'
+      + '4. Execução ou serviço realizado → "diario".\n'
+      + '5. Categorias de gasto: combustivel|alimentacao|material|ferramenta|transporte|outros.\n'
+      + '6. "meio período" ou "meio dia" → periodo:"meio". Padrão → "completo".\n'
+      + '7. Adiantamento a empreiteiro → "adiantamentos" com empreitadaId se mapeável.\n\n'
+      + 'CONTEXTO DA OBRA:\n' + gerarContextoObra(obra, c) + '\n\n'
+      + 'TRABALHADORES CADASTRADOS:\n' + trabCtx + '\n\n'
+      + 'EMPREITADAS CADASTRADAS:\n' + empCtx + '\n\n'
+      + 'VALOR MARMITA: R$ ' + (obra.valorMarmita || 30) + '\n'
+      + 'DATA HOJE: ' + hojeISO() + '\n\n'
+      + 'FORMATO DE RETORNO (JSON exato, sem markdown, sem texto adicional):\n'
+      + '{"diarias":[{"trabId":"","trabNome":"","data":"YYYY-MM-DD","periodo":"completo","marmita":false,"diaria":0,"incerto":false}],'
+      + '"avulsos":[{"categoria":"material","descricao":"","valor":0,"data":"YYYY-MM-DD","incerto":false}],'
+      + '"materiais":[{"nome":"","quantidade":0,"unidade":"un","valorUnit":0,"data":"YYYY-MM-DD","incerto":false}],'
+      + '"diario":[{"data":"YYYY-MM-DD","descricao":"","percentual":null,"etapa":"","incerto":false}],'
+      + '"recebimentos":[{"descricao":"","valor":0,"data":"YYYY-MM-DD","incerto":false}],'
+      + '"adiantamentos":[{"empreitadaId":"","empreitadaNome":"","descricao":"","valor":0,"data":"YYYY-MM-DD","incerto":false}],'
+      + '"incertos":["texto explicativo"]}';
+
+    lancamentoEstado = 'carregando';
+    render();
+
+    try {
+      var resposta = await window._anthropicSend(apiKey, system, [{ role: 'user', content: texto }]);
+      var jsonStr = resposta.trim().replace(/^```json\s*/i,'').replace(/^```\s*/i,'').replace(/```\s*$/,'').trim();
+      var parsed = JSON.parse(jsonStr);
+      ['diarias','avulsos','materiais','diario','recebimentos','adiantamentos'].forEach(function(t) {
+        if (!Array.isArray(parsed[t])) parsed[t] = [];
+        parsed[t].forEach(function(item) { item.incluir = true; });
+      });
+      if (!Array.isArray(parsed.incertos)) parsed.incertos = [];
+      lancamentoRevisao = parsed;
+      lancamentoEstado = 'revisao';
+      render();
+    } catch(e) {
+      console.error('Erro ao interpretar lançamento:', e);
+      lancamentoEstado = 'entrada';
+      render();
+      toast('Erro ao interpretar. Verifique sua chave de API e tente novamente.');
+    }
+  }
+
+  function toggleLancItem(tipo, idx, checked) {
+    if (!lancamentoRevisao || !lancamentoRevisao[tipo]) return;
+    lancamentoRevisao[tipo][idx].incluir = checked;
+    var el = document.getElementById('lanc-item-' + tipo + '-' + idx);
+    if (el) el.classList.toggle('desmarcado', !checked);
+  }
+
+  function setLancItemField(tipo, idx, campo, valor) {
+    if (!lancamentoRevisao || !lancamentoRevisao[tipo]) return;
+    lancamentoRevisao[tipo][idx][campo] = valor;
+  }
+
+  function confirmarLancamento() {
+    var obra = getObra(obraAtualId);
+    if (!obra || !lancamentoRevisao) return;
+    var rev = lancamentoRevisao;
+    var hoje = hojeISO();
+    var totalGravado = 0;
+
+    if (!obra.diarias) obra.diarias = [];
+    (rev.diarias || []).forEach(function(d) {
+      if (!d.incluir) return;
+      var valorDiaria = Number(d.diaria) || 0;
+      var valorMarmita = Number(obra.valorMarmita || 30);
+      var diariaBase = d.periodo === 'meio' ? valorDiaria / 2 : valorDiaria;
+      obra.diarias.push({
+        id: 'd_' + Date.now() + '_' + (d.trabId || 'x') + '_' + Math.random().toString(36).slice(2,6),
+        data: d.data || hoje, trabId: d.trabId || '', trabNome: d.trabNome || '',
+        diaria: valorDiaria, marmita: !!d.marmita, periodo: d.periodo || 'completo',
+        valor: diariaBase + (d.marmita ? valorMarmita : 0)
+      });
+      totalGravado++;
+    });
+
+    if (!obra.gastosAvulsos) obra.gastosAvulsos = [];
+    (rev.avulsos || []).forEach(function(a) {
+      if (!a.incluir) return;
+      var val = Number(a.valor);
+      if (val <= 0) return;
+      obra.gastosAvulsos.push({
+        id: 'av_' + Date.now() + '_' + Math.random().toString(36).slice(2,6),
+        data: a.data || hoje, categoria: a.categoria || 'outros',
+        descricao: a.descricao || '', valor: val
+      });
+      totalGravado++;
+    });
+
+    if (!obra.materiais) obra.materiais = [];
+    (rev.materiais || []).forEach(function(m) {
+      if (!m.incluir) return;
+      var qtd = Number(m.quantidade) || 0;
+      var vUnit = Number(m.valorUnit) || 0;
+      if (!m.nome || qtd <= 0 || vUnit <= 0) return;
+      obra.materiais.push({
+        id: 'mat_' + Date.now() + '_' + Math.random().toString(36).slice(2,6),
+        nome: m.nome, quantidade: qtd, unidade: m.unidade || 'un',
+        valorUnit: vUnit, data: m.data || hoje, fornecedor: '', descricao: '',
+        criadoEm: new Date().toISOString()
+      });
+      totalGravado++;
+    });
+
+    if (!obra.diario) obra.diario = [];
+    (rev.diario || []).forEach(function(d) {
+      if (!d.incluir || !d.descricao) return;
+      obra.diario.push({
+        id: 'diario_' + Date.now() + '_' + Math.random().toString(36).slice(2,5),
+        data: d.data || hoje, descricao: d.descricao,
+        percentual: (d.percentual !== undefined && d.percentual !== null) ? Number(d.percentual) : null,
+        etapa: d.etapa || '', criadoEm: new Date().toISOString()
+      });
+      totalGravado++;
+    });
+
+    if (!obra.recebimentos) obra.recebimentos = [];
+    (rev.recebimentos || []).forEach(function(r) {
+      if (!r.incluir) return;
+      var val = Number(r.valor);
+      if (val <= 0) return;
+      obra.recebimentos.push({
+        id: 'rc_' + Date.now() + '_' + Math.random().toString(36).slice(2,6),
+        data: r.data || hoje, descricao: r.descricao || 'Recebimento', valor: val
+      });
+      totalGravado++;
+    });
+
+    (rev.adiantamentos || []).forEach(function(a) {
+      if (!a.incluir || !a.empreitadaId) return;
+      var val = Number(a.valor);
+      if (val <= 0) return;
+      var emp = (obra.empreitadas || []).find(function(e) { return e.id === a.empreitadaId; });
+      if (!emp) return;
+      if (!emp.adiantamentos) emp.adiantamentos = [];
+      emp.adiantamentos.push({
+        id: 'ad_' + Date.now() + '_' + Math.random().toString(36).slice(2,6),
+        data: a.data || hoje, descricao: a.descricao || 'Adiantamento', valor: val
+      });
+      totalGravado++;
+    });
+
+    salvar();
+    lancamentoEstado = 'gravado';
+    toast(totalGravado + ' item' + (totalGravado !== 1 ? 'ns' : '') + ' lançado' + (totalGravado !== 1 ? 's' : '') + '!');
+    render();
+  }
+
+  function cancelarLancamento() {
+    lancamentoEstado = 'entrada';
+    lancamentoRevisao = null;
+    render();
+  }
+
+  function novoLancamento() {
+    lancamentoEstado = 'entrada';
+    lancamentoRevisao = null;
+    lancamentoTexto = '';
+    render();
+  }
+
   function inicializarAtmosphera() {
     if (estado.obras.length > 0) return;
     const obraAtmo = {
@@ -4306,7 +5005,7 @@
   window._anthropicSend = async function(apiKey, system, messages) {
     const client = new Anthropic({ apiKey, dangerouslyAllowBrowser: true });
     const msg = await client.messages.create({
-      model: 'claude-sonnet-4-5',
+      model: 'claude-sonnet-4-6',
       max_tokens: 1024,
       system: system,
       messages: messages
