@@ -689,6 +689,7 @@
   let lancamentoEstado   = 'entrada';
   let lancamentoTexto    = '';
   let lancamentoRevisao  = null;
+  let lancamentoModo     = 'dia';   // 'dia' | 'info'
 
   function carregar() {
     try {
@@ -1543,6 +1544,7 @@
     lancamentoEstado   = 'entrada';
     lancamentoRevisao  = null;
     lancamentoTexto    = '';
+    lancamentoModo     = 'dia';
     render();
     window.scrollTo(0, 0);
   }
@@ -4361,13 +4363,23 @@
     }
 
     if (lancamentoEstado === 'revisao' && lancamentoRevisao) {
-      return _renderLancamentoRevisao(obra);
+      return lancamentoModo === 'info' ? _renderInfoObraRevisao(obra) : _renderLancamentoRevisao(obra);
     }
 
+    var placeholderDia  = 'Ex: Carlos e Emerson trabalharam com marmita. Comprei 80 reais de impermeabilização. Removemos 100% do rejunte das piscinas.';
+    var placeholderInfo = 'Ex: Cliente é o Complexo Atmosphera, CNPJ 12.345.678/0001-90, fica em Itupeva. O escopo é impermeabilização de 4 piscinas, sauna e iluminação. Equipe de impermeabilização cuidou das piscinas. Garantia de 5 anos.';
     return '<div class="card">'
       + '<div class="card-title">LANÇAMENTO RÁPIDO — IA</div>'
-      + '<p style="font-size:13px;color:var(--ink-3);margin-bottom:14px;">Descreva o dia em texto livre. A IA interpreta e mostra o que vai lançar — você confirma antes de gravar.</p>'
-      + '<textarea id="lanc-input" rows="5" placeholder="Ex: Carlos e Emerson trabalharam com marmita. Comprei 80 reais de impermeabilização. Removemos 100% do rejunte das piscinas." style="width:100%;">' + escapeHtml(lancamentoTexto) + '</textarea>'
+      + '<div style="display:flex;gap:8px;margin-bottom:14px;">'
+      + '<button class="rel-quinzena-pill' + (lancamentoModo === 'dia' ? ' active' : '') + '" data-modo="dia" onclick="setLancamentoModo(\'dia\')" style="font-size:12px;">📅 Lançamento do dia</button>'
+      + '<button class="rel-quinzena-pill' + (lancamentoModo === 'info' ? ' active' : '') + '" data-modo="info" onclick="setLancamentoModo(\'info\')" style="font-size:12px;">📋 Informações da Obra</button>'
+      + '</div>'
+      + '<p style="font-size:13px;color:var(--ink-3);margin-bottom:10px;">'
+      + (lancamentoModo === 'info'
+          ? 'Descreva os dados cadastrais da obra. A IA extrai e preenche a aba Informações — você revisa antes de confirmar.'
+          : 'Descreva o dia em texto livre. A IA interpreta e mostra o que vai lançar — você confirma antes de gravar.')
+      + '</p>'
+      + '<textarea id="lanc-input" rows="5" placeholder="' + (lancamentoModo === 'info' ? placeholderInfo : placeholderDia) + '" style="width:100%;">' + escapeHtml(lancamentoTexto) + '</textarea>'
       + '<button class="btn-primary" onclick="interpretarLancamento()">Interpretar →</button>'
       + '<button class="btn-secondary" onclick="lancamentoTexto=\'\';var el=document.getElementById(\'lanc-input\');if(el)el.value=\'\';" style="margin-top:8px;">Limpar</button>'
       + '<p style="font-size:11px;color:var(--ink-3);margin-top:10px;text-align:center;">A IA nunca grava sem sua confirmação.</p>'
@@ -4533,6 +4545,19 @@
 
   function _renderLancamentoGravado() {
     var rev = lancamentoRevisao || {};
+    if (rev.infoModo) {
+      var cCampos = Object.keys(rev.campos || {}).filter(function(k) { return rev.campos[k].incluir; }).length;
+      var cFrentes = (rev.frentes || []).filter(function(f) { return f.incluir; }).length;
+      var contsInfo = [];
+      if (cCampos) contsInfo.push(cCampos + ' campo' + (cCampos > 1 ? 's' : '') + ' preenchido' + (cCampos > 1 ? 's' : ''));
+      if (cFrentes) contsInfo.push(cFrentes + ' frente' + (cFrentes > 1 ? 's' : '') + ' adicionada' + (cFrentes > 1 ? 's' : ''));
+      return '<div class="card" style="text-align:center;padding:32px 24px;">'
+        + '<div style="font-size:18px;font-weight:700;color:var(--purple);margin-bottom:10px;">Informações salvas!</div>'
+        + (contsInfo.length > 0 ? '<div style="font-size:14px;color:var(--ink-2);margin-bottom:20px;">' + contsInfo.join(' · ') + '</div>' : '')
+        + '<button class="btn-primary" onclick="trocarAba(\'info\')" style="margin-bottom:8px;">Ver Informações da Obra</button>'
+        + '<button class="btn-secondary" onclick="novoLancamento()">Novo Lançamento</button>'
+        + '</div>';
+    }
     var conts = [];
     var d = (rev.diarias || []).filter(function(x){ return x.incluir; }).length;
     var a = (rev.avulsos || []).filter(function(x){ return x.incluir; }).length;
@@ -4555,6 +4580,8 @@
   }
 
   async function interpretarLancamento() {
+    if (lancamentoModo === 'info') { interpretarInfoObra(); return; }
+
     var textarea = document.getElementById('lanc-input');
     var texto = textarea ? textarea.value.trim() : '';
     if (!texto) { alert('Digite um relato antes de interpretar.'); return; }
@@ -4760,6 +4787,265 @@
     lancamentoRevisao = null;
     lancamentoTexto = '';
     render();
+  }
+
+  // ═══════════════════════════════════════════════════════════
+  // ASSISTENTE IA — MODO INFORMAÇÕES DA OBRA
+  // ═══════════════════════════════════════════════════════════
+
+  function setLancamentoModo(modo) {
+    lancamentoModo = modo;
+    document.querySelectorAll('.rel-quinzena-pill[data-modo]').forEach(function(p) {
+      p.classList.toggle('active', p.dataset.modo === modo);
+    });
+    var el = document.getElementById('lanc-input');
+    if (!el) return;
+    el.placeholder = modo === 'info'
+      ? 'Ex: Cliente é o Complexo Atmosphera, CNPJ 12.345.678/0001-90, fica em Itupeva. O escopo é impermeabilização de 4 piscinas, sauna e iluminação. Equipe de impermeabilização cuidou das piscinas. Garantia de 5 anos.'
+      : 'Ex: Carlos e Emerson trabalharam com marmita. Comprei 80 reais de impermeabilização. Removemos 100% do rejunte das piscinas.';
+    var desc = el.closest('.card') && el.closest('.card').querySelector('p');
+    // update description text without re-render
+    var pEls = document.querySelectorAll('#lanc-input ~ p, #lanc-input + p');
+  }
+
+  async function interpretarInfoObra() {
+    var textarea = document.getElementById('lanc-input');
+    var texto = textarea ? textarea.value.trim() : '';
+    if (!texto) { alert('Digite as informações antes de interpretar.'); return; }
+    lancamentoTexto = texto;
+
+    var apiKey = localStorage.getItem(KEY_IA);
+    if (!apiKey) { abrirModalChaveIA(); return; }
+    if (!window._anthropicSend) { alert('SDK ainda carregando — aguarde e tente novamente.'); return; }
+
+    var obra = getObra(obraAtualId);
+    if (!obra) return;
+    var info = obra.info || {};
+    var frentesExistentes = (info.frentes || []).length > 0
+      ? (info.frentes.map(function(f) { return '- ' + f.nome + (f.descricao ? ': ' + f.descricao : ''); }).join('\n'))
+      : 'Nenhuma frente cadastrada.';
+
+    var camposAtuais = '';
+    var CAMPO_LABELS = {
+      clienteRazaoSocial: 'Razão Social / Nome',
+      clienteCpfCnpj:     'CPF / CNPJ',
+      clienteEndereco:    'Endereço',
+      clienteContato:     'Contato / Responsável',
+      clienteTelefone:    'Telefone',
+      clienteEmail:       'E-mail',
+      escopoDetalhado:    'Escopo detalhado',
+      garantia:           'Garantia'
+    };
+    Object.keys(CAMPO_LABELS).forEach(function(k) {
+      var val = info[k] || '';
+      camposAtuais += '- ' + CAMPO_LABELS[k] + ': ' + (val ? '"' + val.substring(0, 80) + '"' : '(vazio)') + '\n';
+    });
+
+    var system = 'Você é um assistente de cadastro para o app AS Construction.\n'
+      + 'Interprete a descrição em linguagem natural e extraia informações cadastrais da obra.\n'
+      + 'Retorne APENAS JSON válido (sem markdown, sem comentários).\n\n'
+      + 'OBRA: ' + obra.nome + '\n\n'
+      + 'CAMPOS JÁ PREENCHIDOS (retorne null para campos que não foram mencionados no texto, mesmo que já estejam preenchidos):\n'
+      + camposAtuais + '\n'
+      + 'FRENTES DE TRABALHO JÁ CADASTRADAS:\n' + frentesExistentes + '\n\n'
+      + 'REGRAS:\n'
+      + '1. Retorne null nos campos não mencionados no texto — não invente.\n'
+      + '2. Frentes mencionadas → incluir em "frentes" para serem ADICIONADAS à lista (não substituem as existentes).\n'
+      + '3. Não adicione frentes já cadastradas com o mesmo nome.\n'
+      + '4. Formate CNPJ como XX.XXX.XXX/XXXX-XX e CPF como XXX.XXX.XXX-XX quando possível.\n'
+      + '5. Se um dado for ambíguo ou incerto → incerto:true no campo correspondente + nota em "incertos".\n'
+      + '6. Garantia: extraia apenas o texto/prazo mencionado.\n\n'
+      + 'FORMATO DE RETORNO:\n'
+      + '{"campos":{"clienteRazaoSocial":"valor ou null","clienteCpfCnpj":"valor ou null","clienteEndereco":"valor ou null","clienteContato":"valor ou null","clienteTelefone":"valor ou null","clienteEmail":"valor ou null","escopoDetalhado":"valor ou null","garantia":"valor ou null"},'
+      + '"frentes":[{"nome":"","descricao":"","incerto":false}],'
+      + '"incertos":["texto explicativo"]}';
+
+    lancamentoEstado = 'carregando';
+    render();
+
+    try {
+      var resposta = await window._anthropicSend(apiKey, system, [{ role: 'user', content: texto }]);
+      var jsonStr = resposta.trim().replace(/^```json\s*/i,'').replace(/^```\s*/i,'').replace(/```\s*$/,'').trim();
+      var parsed = JSON.parse(jsonStr);
+
+      // Filtrar campos com valor não-nulo
+      var campos = {};
+      Object.keys(parsed.campos || {}).forEach(function(k) {
+        var val = parsed.campos[k];
+        if (val !== null && val !== undefined && String(val).trim() !== '') {
+          campos[k] = { valor: String(val).trim(), incluir: true };
+        }
+      });
+
+      // Filtrar frentes com nome não-vazio e não duplicadas
+      var frentesNomesExistentes = (info.frentes || []).map(function(f) { return f.nome.toLowerCase().trim(); });
+      var frentes = (parsed.frentes || []).filter(function(f) {
+        return f.nome && !frentesNomesExistentes.includes(f.nome.toLowerCase().trim());
+      });
+      frentes.forEach(function(f) { f.incluir = true; });
+
+      if (Object.keys(campos).length === 0 && frentes.length === 0) {
+        lancamentoEstado = 'entrada';
+        render();
+        toast('Nenhuma informação identificada no texto. Tente ser mais específico.');
+        return;
+      }
+
+      lancamentoRevisao = {
+        infoModo: true,
+        campos: campos,
+        frentes: frentes,
+        incertos: Array.isArray(parsed.incertos) ? parsed.incertos : []
+      };
+      lancamentoEstado = 'revisao';
+      render();
+    } catch(e) {
+      console.error('Erro ao interpretar informações:', e);
+      lancamentoEstado = 'entrada';
+      render();
+      toast('Erro ao interpretar. Verifique sua chave de API e tente novamente.');
+    }
+  }
+
+  function _renderInfoObraRevisao(obra) {
+    var rev = lancamentoRevisao;
+    var info = obra.info || {};
+    var html = '<div class="card">';
+    html += '<div class="card-title">REVISE AS INFORMAÇÕES DA OBRA</div>';
+    html += '<p style="font-size:13px;color:var(--ink-3);margin-bottom:16px;">Desmarque campos que não quer preencher. Edite se necessário.</p>';
+
+    var CAMPO_LABELS = {
+      clienteRazaoSocial: 'Razão Social / Nome',
+      clienteCpfCnpj:     'CPF / CNPJ',
+      clienteEndereco:    'Endereço',
+      clienteContato:     'Contato / Responsável',
+      clienteTelefone:    'Telefone',
+      clienteEmail:       'E-mail',
+      escopoDetalhado:    'Escopo detalhado',
+      garantia:           'Garantia'
+    };
+
+    var CAMPOS_TEXTAREA = { escopoDetalhado: true, garantia: true };
+
+    var totalIncluidos = 0;
+    var campos = rev.campos || {};
+    var campoKeys = Object.keys(campos);
+
+    if (campoKeys.length > 0) {
+      html += '<div class="lanc-secao"><div class="lanc-secao-titulo">Campos (' + campoKeys.length + ')</div>';
+      campoKeys.forEach(function(campo) {
+        var item = campos[campo];
+        if (item.incluir) totalIncluidos++;
+        var label = CAMPO_LABELS[campo] || campo;
+        var valorAtual = info[campo] || '';
+        var sobrescreve = valorAtual && valorAtual !== item.valor;
+        html += '<div class="lanc-item' + (item.incluir ? '' : ' desmarcado') + '" id="lanc-infocampo-' + campo + '" style="flex-direction:column;align-items:stretch;gap:6px;">';
+        html += '<div style="display:flex;align-items:center;gap:10px;">';
+        html += '<input type="checkbox" class="lanc-item-check" ' + (item.incluir ? 'checked' : '') + ' onchange="toggleInfoCampo(\'' + campo + '\',this.checked)">';
+        html += '<span style="font-size:13px;font-weight:600;color:var(--ink);">' + escapeHtml(label) + '</span>';
+        html += '</div>';
+        if (sobrescreve) {
+          html += '<div style="font-size:11px;color:var(--amber);padding:4px 8px;background:rgba(217,119,6,0.07);border-radius:6px;">⚠ Substituirá: <em>' + escapeHtml(valorAtual.substring(0, 120) + (valorAtual.length > 120 ? '…' : '')) + '</em></div>';
+        }
+        if (CAMPOS_TEXTAREA[campo]) {
+          html += '<textarea rows="3" oninput="setInfoCampo(\'' + campo + '\',this.value)" style="width:100%;font-size:13px;margin-top:2px;">' + escapeHtml(item.valor) + '</textarea>';
+        } else {
+          html += '<input type="text" value="' + escapeHtml(item.valor) + '" oninput="setInfoCampo(\'' + campo + '\',this.value)" style="width:100%;font-size:13px;margin-top:2px;">';
+        }
+        html += '</div>';
+      });
+      html += '</div>';
+    }
+
+    if (rev.frentes && rev.frentes.length > 0) {
+      html += '<div class="lanc-secao"><div class="lanc-secao-titulo">Frentes de trabalho a adicionar (' + rev.frentes.length + ')</div>';
+      html += '<div style="font-size:12px;color:var(--ink-3);margin-bottom:8px;">Serão adicionadas às frentes já cadastradas.</div>';
+      rev.frentes.forEach(function(f, i) {
+        if (f.incluir) totalIncluidos++;
+        html += '<div class="lanc-item' + (f.incluir ? '' : ' desmarcado') + '" id="lanc-infofrente-' + i + '">';
+        html += '<input type="checkbox" class="lanc-item-check" ' + (f.incluir ? 'checked' : '') + ' onchange="toggleInfoFrente(' + i + ',this.checked)">';
+        html += '<div class="lanc-item-body">';
+        html += '<div class="lanc-item-label">' + escapeHtml(f.nome) + (f.incerto ? ' <span style="color:var(--amber);font-size:11px;">⚠ incerto</span>' : '') + '</div>';
+        if (f.descricao) html += '<div class="lanc-item-sub">' + escapeHtml(f.descricao) + '</div>';
+        html += '<div class="lanc-item-fields">';
+        html += '<input type="text" value="' + escapeHtml(f.nome) + '" placeholder="Nome da frente" oninput="setInfoFrente(' + i + ',\'nome\',this.value)" style="flex:1;">';
+        html += '<input type="text" value="' + escapeHtml(f.descricao || '') + '" placeholder="Descrição (opcional)" oninput="setInfoFrente(' + i + ',\'descricao\',this.value)" style="flex:1;">';
+        html += '</div></div></div>';
+      });
+      html += '</div>';
+    }
+
+    if (rev.incertos && rev.incertos.length > 0) {
+      html += '<div class="lanc-secao"><div class="lanc-secao-titulo">Itens incertos — não serão gravados</div>';
+      rev.incertos.forEach(function(txt) {
+        html += '<div class="lanc-incerto">' + escapeHtml(String(txt)) + '</div>';
+      });
+      html += '</div>';
+    }
+
+    html += '<div style="border-top:1px solid rgba(0,0,0,0.06);margin-top:16px;padding-top:14px;display:flex;gap:8px;flex-wrap:wrap;">';
+    html += '<button class="btn-primary" onclick="confirmarInfoObra()" style="flex:1;margin-top:0;">Confirmar e Preencher Informações (' + totalIncluidos + ' itens)</button>';
+    html += '<button class="btn-secondary" onclick="cancelarLancamento()" style="width:auto;margin-top:0;">Cancelar</button>';
+    html += '</div>';
+    html += '</div>';
+    return html;
+  }
+
+  function confirmarInfoObra() {
+    var obra = getObra(obraAtualId);
+    if (!obra || !lancamentoRevisao) return;
+    var rev = lancamentoRevisao;
+    if (!obra.info) obra.info = {};
+    var totalGravado = 0;
+
+    // Gravar campos escalares
+    Object.keys(rev.campos || {}).forEach(function(campo) {
+      var item = rev.campos[campo];
+      if (!item.incluir) return;
+      obra.info[campo] = item.valor;
+      totalGravado++;
+    });
+
+    // Adicionar frentes
+    if (!obra.info.frentes) obra.info.frentes = [];
+    (rev.frentes || []).forEach(function(f) {
+      if (!f.incluir || !f.nome) return;
+      obra.info.frentes.push({
+        id: 'frente_' + Date.now() + '_' + Math.random().toString(36).slice(2,5),
+        nome: f.nome.trim(),
+        descricao: (f.descricao || '').trim()
+      });
+      totalGravado++;
+    });
+
+    salvar();
+    lancamentoEstado = 'gravado';
+    toast(totalGravado + ' item' + (totalGravado !== 1 ? 'ns' : '') + ' gravado' + (totalGravado !== 1 ? 's' : '') + ' nas Informações!');
+    render();
+  }
+
+  function toggleInfoCampo(campo, checked) {
+    if (!lancamentoRevisao || !lancamentoRevisao.campos || !lancamentoRevisao.campos[campo]) return;
+    lancamentoRevisao.campos[campo].incluir = checked;
+    var el = document.getElementById('lanc-infocampo-' + campo);
+    if (el) el.classList.toggle('desmarcado', !checked);
+  }
+
+  function setInfoCampo(campo, valor) {
+    if (!lancamentoRevisao || !lancamentoRevisao.campos || !lancamentoRevisao.campos[campo]) return;
+    lancamentoRevisao.campos[campo].valor = valor;
+  }
+
+  function toggleInfoFrente(idx, checked) {
+    if (!lancamentoRevisao || !lancamentoRevisao.frentes) return;
+    lancamentoRevisao.frentes[idx].incluir = checked;
+    var el = document.getElementById('lanc-infofrente-' + idx);
+    if (el) el.classList.toggle('desmarcado', !checked);
+  }
+
+  function setInfoFrente(idx, field, valor) {
+    if (!lancamentoRevisao || !lancamentoRevisao.frentes) return;
+    lancamentoRevisao.frentes[idx][field] = valor;
   }
 
   function inicializarAtmosphera() {
