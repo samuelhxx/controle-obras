@@ -633,6 +633,31 @@
   .lanc-incerto { background:rgba(217,119,6,0.07); border:1.5px solid rgba(217,119,6,0.2); border-radius:10px; padding:8px 12px; margin-bottom:6px; font-size:12px; color:var(--amber); }
   .sidebar-item-destaque { font-weight:700 !important; color:var(--purple) !important; }
   .sidebar-item-destaque.active { background:rgba(115,1,140,0.10) !important; }
+
+  /* ── Cronograma ── */
+  .crono-etapa-card { padding:14px 0; border-bottom:1px solid rgba(0,0,0,0.05); }
+  .crono-etapa-card:last-child { border-bottom:none; }
+  .crono-etapa-header { display:flex; align-items:flex-start; justify-content:space-between; gap:8px; margin-bottom:4px; }
+  .crono-etapa-nome { font-size:14px; font-weight:700; color:var(--ink); }
+  .crono-etapa-datas { font-size:11px; color:var(--ink-3); margin-bottom:8px; }
+  .crono-bar-track { height:6px; border-radius:100px; background:rgba(0,0,0,0.07); overflow:hidden; margin-bottom:6px; }
+  .crono-bar-fill { height:6px; border-radius:100px; background:var(--purple); }
+  .crono-bar-fill.conc { background:var(--green); }
+  .crono-meta { display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
+  .crono-pct { font-size:12px; font-weight:700; color:var(--purple); }
+  .crono-status-badge { font-size:11px; padding:2px 8px; border-radius:100px; font-weight:600; display:inline-block; }
+  .crono-status-nao { background:rgba(0,0,0,0.06); color:var(--ink-3); }
+  .crono-status-and { background:rgba(217,119,6,0.10); color:var(--amber); }
+  .crono-status-conc { background:rgba(5,150,105,0.10); color:var(--green); }
+  .crono-indicador { font-size:11px; font-weight:700; }
+  .crono-ind-ok   { color:var(--green); }
+  .crono-ind-warn { color:var(--amber); }
+  .crono-ind-late { color:var(--red); }
+  .crono-ind-wait { color:var(--ink-3); }
+  .crono-geral-bar { height:14px; border-radius:100px; background:rgba(0,0,0,0.07); overflow:hidden; margin:10px 0 4px; }
+  .crono-geral-fill { height:14px; border-radius:100px; background:var(--purple); transition:width 0.4s ease; }
+  [data-theme="dark"] .crono-etapa-card { border-bottom-color:rgba(255,255,255,0.05); }
+  [data-theme="dark"] .crono-bar-track { background:rgba(255,255,255,0.08); }
 </style>
 </head>
 <body>
@@ -691,6 +716,12 @@
   let lancamentoRevisao  = null;
   let lancamentoModo     = 'dia';   // 'dia' | 'info'
 
+  let cronoEtapaEditandoId = null;
+  let cronoIAEstado        = 'entrada';  // 'entrada'|'carregando'|'revisao'|'gravado'
+  let cronoIAModo          = 'montar';   // 'montar'|'andamento'
+  let cronoIARevisao       = null;
+  let cronoIATexto         = '';
+
   function carregar() {
     try {
       const raw = localStorage.getItem(KEY);
@@ -731,6 +762,7 @@
       if (!o.info) o.info = {};
       if (!o.materiais) o.materiais = [];
       if (!o.diario) o.diario = [];
+      if (!o.cronograma) o.cronograma = { etapas: [] };
 
       // Diárias antigas: garantir campo periodo
       if (o.diarias) {
@@ -915,6 +947,7 @@
       ['materiais',   'Materiais'],
       ['recebimentos','Recebimentos'],
       ['diario',      'Diário de Obra'],
+      ['cronograma',  'Cronograma'],
       ['historico',   'Histórico'],
       ['grafico',     'Gráfico'],
       ['equipe',      'Equipe'],
@@ -961,6 +994,7 @@
     else if (abaAtual === 'info') html += renderAbaInfo(obra);
     else if (abaAtual === 'relcliente') html += renderAbaRelatorioCliente(obra, c);
     else if (abaAtual === 'diario') html += renderAbaDiario(obra);
+    else if (abaAtual === 'cronograma') html += renderAbaCronograma(obra);
     else if (abaAtual === 'lancamento') html += renderAbaLancamento(obra, c);
     html += '</div></div>'; // aba-content + obra-content
 
@@ -1545,6 +1579,11 @@
     lancamentoRevisao  = null;
     lancamentoTexto    = '';
     lancamentoModo     = 'dia';
+    cronoEtapaEditandoId = null;
+    cronoIAEstado        = 'entrada';
+    cronoIAModo          = 'montar';
+    cronoIARevisao       = null;
+    cronoIATexto         = '';
     render();
     window.scrollTo(0, 0);
   }
@@ -5046,6 +5085,983 @@
   function setInfoFrente(idx, field, valor) {
     if (!lancamentoRevisao || !lancamentoRevisao.frentes) return;
     lancamentoRevisao.frentes[idx][field] = valor;
+  }
+
+  // ═══════════════════════════════════════════════════════════════════
+  // CRONOGRAMA E ACOMPANHAMENTO DE OBRA
+  // ═══════════════════════════════════════════════════════════════════
+
+  function _diasEntre(isoA, isoB) {
+    return Math.round((new Date(isoB + 'T12:00:00') - new Date(isoA + 'T12:00:00')) / 86400000);
+  }
+
+  function _calcIndicadorEtapa(etapa) {
+    var hoje = hojeISO();
+    var ini = etapa.dataInicioPrevisto, fim = etapa.dataFimPrevisto;
+    var pct = Number(etapa.percentual) || 0;
+    var st  = etapa.status || 'nao_iniciada';
+    if (st === 'concluida') return { label: 'Concluída', cls: 'crono-ind-ok', pdfCor: 'green' };
+    if (!ini || !fim)       return { label: '—',         cls: 'crono-ind-wait', pdfCor: 'cinza' };
+    if (hoje < ini && pct === 0) return { label: 'Aguardando', cls: 'crono-ind-wait', pdfCor: 'cinza' };
+    if (hoje > fim && pct < 100) return { label: 'Atrasada',   cls: 'crono-ind-late', pdfCor: 'red' };
+    var totalDias = Math.max(1, _diasEntre(ini, fim));
+    var decorridos = Math.min(Math.max(0, _diasEntre(ini, hoje)), totalDias);
+    var pctEsp = (decorridos / totalDias) * 100;
+    if (pct >= pctEsp + 5)    return { label: 'Adiantada', cls: 'crono-ind-ok',   pdfCor: 'green' };
+    if (pct < pctEsp - 15)    return { label: 'Atrasada',  cls: 'crono-ind-late', pdfCor: 'red' };
+    return                            { label: 'No prazo',  cls: 'crono-ind-warn', pdfCor: 'amber' };
+  }
+
+  function _pctGeralCronograma(etapas) {
+    if (!etapas || etapas.length === 0) return 0;
+    var soma = etapas.reduce(function(s, e) { return s + (Number(e.percentual) || 0); }, 0);
+    return Math.round(soma / etapas.length);
+  }
+
+  // ── Render principal ──
+
+  function renderAbaCronograma(obra) {
+    var etapas = (obra.cronograma && obra.cronograma.etapas) ? obra.cronograma.etapas : [];
+    var editando = cronoEtapaEditandoId ? etapas.find(function(e) { return e.id === cronoEtapaEditandoId; }) : null;
+    var pctGeral = _pctGeralCronograma(etapas);
+
+    var html = '';
+
+    // Botões de PDF no topo
+    html += '<div style="display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap;">';
+    html += '<button class="btn-secondary" onclick="gerarPDFCronograma()" style="flex:1;min-width:160px;">Gerar PDF do Cronograma</button>';
+    html += '<button class="btn-primary" onclick="gerarRelatorioAndamento()" style="flex:1;min-width:160px;margin-top:0;">Gerar Relatório de Andamento</button>';
+    html += '</div>';
+
+    html += '<div class="two-col-layout">';
+
+    // Col esquerda: formulário
+    html += '<div><div class="card">';
+    html += '<div class="card-title">' + (editando ? 'EDITAR ETAPA' : 'NOVA ETAPA') + '</div>';
+    html += '<label class="form-label">Nome da etapa *</label>';
+    html += '<input type="text" id="crono-nome" placeholder="Ex: Impermeabilização" value="' + escapeHtml(editando ? editando.nome : '') + '">';
+    html += '<label class="form-label">Descrição <span style="color:var(--ink-3);font-weight:400;">(opcional)</span></label>';
+    html += '<textarea id="crono-desc" rows="3" placeholder="O que será feito nessa etapa...">' + escapeHtml(editando ? (editando.descricao || '') : '') + '</textarea>';
+    html += '<label class="form-label">Início previsto *</label>';
+    html += '<input type="date" id="crono-ini" value="' + escapeHtml(editando ? editando.dataInicioPrevisto : '') + '">';
+    html += '<label class="form-label">Término previsto *</label>';
+    html += '<input type="date" id="crono-fim" value="' + escapeHtml(editando ? editando.dataFimPrevisto : '') + '">';
+    if (editando) {
+      html += '<label class="form-label">% de conclusão</label>';
+      html += '<input type="number" id="crono-pct" min="0" max="100" value="' + (Number(editando.percentual) || 0) + '">';
+      html += '<label class="form-label">Status</label>';
+      html += '<select id="crono-status">';
+      var stOpts = [['nao_iniciada','Não iniciada'],['em_andamento','Em andamento'],['concluida','Concluída']];
+      stOpts.forEach(function(o) {
+        html += '<option value="' + o[0] + '"' + (editando.status === o[0] ? ' selected' : '') + '>' + o[1] + '</option>';
+      });
+      html += '</select>';
+      html += '<button class="btn-primary" onclick="salvarEtapa()">Atualizar Etapa</button>';
+      html += '<button class="btn-secondary" onclick="cancelarEdicaoEtapa()" style="margin-top:8px;">Cancelar</button>';
+    } else {
+      html += '<button class="btn-primary" onclick="salvarEtapa()">Salvar Etapa</button>';
+    }
+    html += '</div>';
+
+    // Card IA dentro da col esquerda
+    html += '<div class="card" style="margin-top:0;">';
+    html += '<div class="card-title">ASSISTENTE IA — CRONOGRAMA</div>';
+
+    if (cronoIAEstado === 'carregando') {
+      html += '<div style="text-align:center;padding:20px 0;">';
+      html += '<div class="chat-loading" style="justify-content:center;margin-bottom:10px;"><span></span><span></span><span></span></div>';
+      html += '<div style="color:var(--ink-3);font-size:13px;">Interpretando...</div>';
+      html += '</div>';
+    } else if (cronoIAEstado === 'gravado') {
+      html += '<div style="text-align:center;padding:16px 0;">';
+      html += '<div style="font-size:16px;font-weight:700;color:var(--purple);margin-bottom:10px;">';
+      html += cronoIAModo === 'montar' ? 'Cronograma salvo!' : 'Andamento atualizado!';
+      html += '</div>';
+      html += '<button class="btn-secondary" onclick="novoCronoIA()" style="width:auto;padding:8px 20px;">Novo</button>';
+      html += '</div>';
+    } else if (cronoIAEstado === 'revisao' && cronoIARevisao) {
+      html += cronoIAModo === 'montar' ? _renderCronoRevisaoMontar() : _renderCronoRevisaoAndamento(etapas);
+    } else {
+      html += '<div style="display:flex;gap:8px;margin-bottom:12px;">';
+      html += '<button class="rel-quinzena-pill' + (cronoIAModo === 'montar' ? ' active' : '') + '" data-cronomodo="montar" onclick="setCronoIAModo(\'montar\')" style="font-size:12px;">📋 Montar Cronograma</button>';
+      html += '<button class="rel-quinzena-pill' + (cronoIAModo === 'andamento' ? ' active' : '') + '" data-cronomodo="andamento" onclick="setCronoIAModo(\'andamento\')" style="font-size:12px;">📊 Atualizar Andamento</button>';
+      html += '</div>';
+      html += '<p style="font-size:12px;color:var(--ink-3);margin-bottom:10px;">' + (cronoIAModo === 'montar'
+        ? 'Descreva as etapas em texto livre. A IA estrutura o cronograma — você revisa antes de salvar.'
+        : 'Descreva o progresso atual de cada etapa. A IA atualiza os percentuais — você confirma antes de salvar.') + '</p>';
+      html += '<textarea id="crono-ia-input" rows="4" placeholder="' + (cronoIAModo === 'montar'
+        ? 'Ex: A obra tem 4 etapas: remoção de rejunte de 27/05 a 05/06, impermeabilização de 06/06 a 20/06...'
+        : 'Ex: A remoção está 100% concluída, impermeabilização em 40%, o resto não começou.') + '" style="width:100%;">' + escapeHtml(cronoIATexto) + '</textarea>';
+      html += '<button class="btn-primary" onclick="interpretarCronograma()" style="margin-top:8px;">Interpretar →</button>';
+      html += '<button class="btn-secondary" onclick="cronoIATexto=\'\';var el=document.getElementById(\'crono-ia-input\');if(el)el.value=\'\';" style="margin-top:6px;">Limpar</button>';
+      html += '<p style="font-size:11px;color:var(--ink-3);margin-top:8px;text-align:center;">A IA nunca grava sem sua confirmação.</p>';
+    }
+    html += '</div></div>'; // card IA + col esquerda
+
+    // Col direita: lista de etapas
+    html += '<div><div class="card">';
+    html += '<div class="card-title">ETAPAS DO CRONOGRAMA (' + etapas.length + ')</div>';
+
+    if (etapas.length === 0) {
+      html += '<div style="text-align:center;padding:24px 0;color:var(--ink-3);font-size:14px;">Nenhuma etapa cadastrada.<br>Adicione manualmente ou use o Assistente IA.</div>';
+    } else {
+      // Barra geral
+      html += '<div style="margin-bottom:16px;">';
+      html += '<div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:4px;">';
+      html += '<span style="font-size:12px;color:var(--ink-3);font-weight:600;">CONCLUSÃO GERAL</span>';
+      html += '<span style="font-size:18px;font-weight:800;color:var(--purple);">' + pctGeral + '%</span>';
+      html += '</div>';
+      html += '<div class="crono-geral-bar"><div class="crono-geral-fill" style="width:' + pctGeral + '%;"></div></div>';
+      var concluidas = etapas.filter(function(e) { return e.status === 'concluida'; }).length;
+      html += '<div style="font-size:11px;color:var(--ink-3);">' + concluidas + ' de ' + etapas.length + ' etapa' + (etapas.length !== 1 ? 's' : '') + ' concluída' + (etapas.length !== 1 ? 's' : '') + '</div>';
+      html += '</div>';
+
+      etapas.forEach(function(etapa) {
+        var ind = _calcIndicadorEtapa(etapa);
+        var pct = Number(etapa.percentual) || 0;
+        var stClasse = etapa.status === 'concluida' ? 'crono-status-conc' : etapa.status === 'em_andamento' ? 'crono-status-and' : 'crono-status-nao';
+        var stLabel  = etapa.status === 'concluida' ? 'Concluída' : etapa.status === 'em_andamento' ? 'Em andamento' : 'Não iniciada';
+        var duracaoTxt = '';
+        if (etapa.dataInicioPrevisto && etapa.dataFimPrevisto) {
+          var d = _diasEntre(etapa.dataInicioPrevisto, etapa.dataFimPrevisto);
+          duracaoTxt = ' · ' + d + ' dia' + (d !== 1 ? 's' : '');
+        }
+
+        html += '<div class="crono-etapa-card">';
+        html += '<div class="crono-etapa-header">';
+        html += '<div class="crono-etapa-nome">' + escapeHtml(etapa.nome) + '</div>';
+        html += '<div style="display:flex;gap:6px;align-items:center;flex-shrink:0;">';
+        html += '<button class="btn-mini" onclick="editarEtapa(\'' + etapa.id + '\')">Editar</button>';
+        html += '<button class="btn-mini btn-mini-danger" onclick="removerEtapa(\'' + etapa.id + '\')">×</button>';
+        html += '</div></div>';
+        if (etapa.dataInicioPrevisto && etapa.dataFimPrevisto) {
+          html += '<div class="crono-etapa-datas">' + dateBR(etapa.dataInicioPrevisto) + ' → ' + dateBR(etapa.dataFimPrevisto) + duracaoTxt + '</div>';
+        }
+        html += '<div class="crono-bar-track"><div class="crono-bar-fill' + (etapa.status === 'concluida' ? ' conc' : '') + '" style="width:' + pct + '%;"></div></div>';
+        html += '<div class="crono-meta">';
+        html += '<span class="crono-pct">' + pct + '%</span>';
+        html += '<span class="crono-status-badge ' + stClasse + '">' + stLabel + '</span>';
+        html += '<span class="crono-indicador ' + ind.cls + '">' + ind.label + '</span>';
+        html += '</div>';
+        if (etapa.descricao) html += '<div style="font-size:12px;color:var(--ink-3);margin-top:6px;">' + escapeHtml(etapa.descricao) + '</div>';
+        html += '</div>';
+      });
+    }
+    html += '</div></div>'; // card lista + col direita
+    html += '</div>'; // two-col-layout
+
+    return html;
+  }
+
+  // ── CRUD manual de etapas ──
+
+  function salvarEtapa() {
+    var obra = getObra(obraAtualId);
+    if (!obra) return;
+    if (!obra.cronograma) obra.cronograma = { etapas: [] };
+
+    var nome = (document.getElementById('crono-nome') || {}).value || '';
+    var desc = (document.getElementById('crono-desc') || {}).value || '';
+    var ini  = (document.getElementById('crono-ini')  || {}).value || '';
+    var fim  = (document.getElementById('crono-fim')  || {}).value || '';
+
+    if (!nome.trim()) { alert('Informe o nome da etapa.'); return; }
+    if (!ini || !fim) { alert('Informe as datas de início e término.'); return; }
+    if (fim < ini)    { alert('A data de término deve ser igual ou posterior ao início.'); return; }
+
+    if (cronoEtapaEditandoId) {
+      var idx = obra.cronograma.etapas.findIndex(function(e) { return e.id === cronoEtapaEditandoId; });
+      if (idx !== -1) {
+        var pct = Math.min(100, Math.max(0, Number((document.getElementById('crono-pct') || {}).value) || 0));
+        var st  = (document.getElementById('crono-status') || {}).value || 'nao_iniciada';
+        obra.cronograma.etapas[idx].nome = nome.trim();
+        obra.cronograma.etapas[idx].descricao = desc.trim();
+        obra.cronograma.etapas[idx].dataInicioPrevisto = ini;
+        obra.cronograma.etapas[idx].dataFimPrevisto = fim;
+        obra.cronograma.etapas[idx].percentual = pct;
+        obra.cronograma.etapas[idx].status = st;
+      }
+      cronoEtapaEditandoId = null;
+      toast('Etapa atualizada.');
+    } else {
+      var ordem = obra.cronograma.etapas.length + 1;
+      obra.cronograma.etapas.push({
+        id: 'etapa_' + Date.now() + '_' + Math.random().toString(36).slice(2, 5),
+        nome: nome.trim(),
+        descricao: desc.trim(),
+        dataInicioPrevisto: ini,
+        dataFimPrevisto: fim,
+        ordem: ordem,
+        percentual: 0,
+        status: 'nao_iniciada',
+        criadaEm: new Date().toISOString()
+      });
+      toast('Etapa adicionada.');
+    }
+    salvar();
+    render();
+  }
+
+  function editarEtapa(id) {
+    cronoEtapaEditandoId = id;
+    render();
+    window.scrollTo(0, 0);
+  }
+
+  function cancelarEdicaoEtapa() {
+    cronoEtapaEditandoId = null;
+    render();
+  }
+
+  function removerEtapa(id) {
+    if (!confirm('Remover esta etapa do cronograma?')) return;
+    var obra = getObra(obraAtualId);
+    if (!obra || !obra.cronograma) return;
+    obra.cronograma.etapas = obra.cronograma.etapas.filter(function(e) { return e.id !== id; });
+    salvar();
+    render();
+    toast('Etapa removida.');
+  }
+
+  // ── Assistente IA ──
+
+  function setCronoIAModo(modo) {
+    cronoIAModo = modo;
+    document.querySelectorAll('.rel-quinzena-pill[data-cronomodo]').forEach(function(p) {
+      p.classList.toggle('active', p.dataset.cronomodo === modo);
+    });
+    var el = document.getElementById('crono-ia-input');
+    if (!el) return;
+    el.placeholder = modo === 'montar'
+      ? 'Ex: A obra tem 4 etapas: remoção de rejunte de 27/05 a 05/06, impermeabilização de 06/06 a 20/06...'
+      : 'Ex: A remoção está 100% concluída, impermeabilização em 40%, o resto não começou.';
+  }
+
+  async function interpretarCronograma() {
+    var textarea = document.getElementById('crono-ia-input');
+    var texto = textarea ? textarea.value.trim() : '';
+    if (!texto) { alert('Digite o texto antes de interpretar.'); return; }
+    cronoIATexto = texto;
+
+    var apiKey = localStorage.getItem(KEY_IA);
+    if (!apiKey) { abrirModalChaveIA(); return; }
+    if (!window._anthropicSend) { alert('SDK ainda carregando — aguarde e tente novamente.'); return; }
+
+    var obra = getObra(obraAtualId);
+    if (!obra) return;
+
+    cronoIAEstado = 'carregando';
+    render();
+
+    if (cronoIAModo === 'montar') {
+      await _interpretarMontarCronograma(obra, texto, apiKey);
+    } else {
+      await _interpretarAndamentoCronograma(obra, texto, apiKey);
+    }
+  }
+
+  async function _interpretarMontarCronograma(obra, texto, apiKey) {
+    var system = 'Você é um assistente de planejamento de obras para o app AS Construction.\n'
+      + 'Interprete a descrição em linguagem natural e estruture as etapas do cronograma.\n'
+      + 'Retorne APENAS JSON válido, sem markdown, sem explicações.\n\n'
+      + 'OBRA: ' + obra.nome + '\n'
+      + 'DATA HOJE: ' + hojeISO() + '\n\n'
+      + 'REGRAS:\n'
+      + '1. Extraia cada etapa mencionada com nome, datas início e fim no formato YYYY-MM-DD.\n'
+      + '2. Mantenha a ordem cronológica. Atribua campo "ordem" crescente (1, 2, 3...).\n'
+      + '3. Para datas relativas ("mês que vem", "daqui a 15 dias") calcule a partir de DATA HOJE.\n'
+      + '4. Se uma data for ambígua ou ausente → incerto:true + nota em "incertos".\n'
+      + '5. Descrição: 1-2 frases resumindo a atividade da etapa.\n'
+      + '6. Nunca invente datas não mencionadas. Prefira incerto:true.\n\n'
+      + 'FORMATO DE RETORNO:\n'
+      + '{"etapas":[{"nome":"","descricao":"","dataInicioPrevisto":"YYYY-MM-DD","dataFimPrevisto":"YYYY-MM-DD","ordem":1,"incerto":false}],"incertos":[]}';
+
+    try {
+      var resp = await window._anthropicSend(apiKey, system, [{ role: 'user', content: texto }]);
+      var jsonStr = resp.trim().replace(/^```json\s*/i,'').replace(/^```\s*/i,'').replace(/```\s*$/,'').trim();
+      var parsed = JSON.parse(jsonStr);
+      var etapas = (parsed.etapas || []).filter(function(e) { return e.nome; });
+      etapas.forEach(function(e) { e.incluir = true; });
+      if (etapas.length === 0) {
+        cronoIAEstado = 'entrada';
+        render();
+        toast('Nenhuma etapa identificada. Tente descrever com mais detalhes.');
+        return;
+      }
+      cronoIARevisao = { etapas: etapas, incertos: parsed.incertos || [] };
+      cronoIAEstado = 'revisao';
+      render();
+    } catch(e) {
+      console.error(e);
+      cronoIAEstado = 'entrada';
+      render();
+      toast('Erro ao interpretar. Verifique sua chave de API e tente novamente.');
+    }
+  }
+
+  async function _interpretarAndamentoCronograma(obra, texto, apiKey) {
+    var etapas = (obra.cronograma && obra.cronograma.etapas) || [];
+    if (etapas.length === 0) {
+      cronoIAEstado = 'entrada';
+      render();
+      toast('Cadastre etapas no cronograma antes de atualizar o andamento.');
+      return;
+    }
+    var listaEtapas = etapas.map(function(e) {
+      return e.id + ' | ' + e.nome + ' | ' + (Number(e.percentual)||0) + '% | ' + (e.status || 'nao_iniciada');
+    }).join('\n');
+
+    var system = 'Você é um assistente de acompanhamento de obras para o app AS Construction.\n'
+      + 'Interprete o relato de progresso e mapeie os percentuais para as etapas cadastradas.\n'
+      + 'Retorne APENAS JSON válido, sem markdown, sem explicações.\n\n'
+      + 'ETAPAS CADASTRADAS:\n' + listaEtapas + '\n\n'
+      + 'REGRAS:\n'
+      + '1. Mapeie cada menção a uma etapa da lista acima (busca aproximada por nome).\n'
+      + '2. Nunca crie etapas novas — só atualize as existentes pelo etapaId.\n'
+      + '3. "concluída/pronta/100%/finalizada" → percentual:100, status:"concluida".\n'
+      + '4. "em andamento/N%" → status:"em_andamento", percentual conforme mencionado.\n'
+      + '5. "não começou/0%/aguardando" → percentual:0, status:"nao_iniciada".\n'
+      + '6. Se ambíguo → incerto:true + nota em "incertos".\n\n'
+      + 'FORMATO DE RETORNO:\n'
+      + '{"atualizacoes":[{"etapaId":"","percentual":0,"status":"nao_iniciada","incerto":false}],"incertos":[]}';
+
+    try {
+      var resp = await window._anthropicSend(apiKey, system, [{ role: 'user', content: texto }]);
+      var jsonStr = resp.trim().replace(/^```json\s*/i,'').replace(/^```\s*/i,'').replace(/```\s*$/,'').trim();
+      var parsed = JSON.parse(jsonStr);
+      var atualizacoes = (parsed.atualizacoes || []).filter(function(a) {
+        return a.etapaId && etapas.find(function(e) { return e.id === a.etapaId; });
+      });
+      atualizacoes.forEach(function(a) { a.incluir = true; });
+      if (atualizacoes.length === 0) {
+        cronoIAEstado = 'entrada';
+        render();
+        toast('Nenhuma etapa correspondente encontrada. Verifique o texto e tente novamente.');
+        return;
+      }
+      cronoIARevisao = { atualizacoes: atualizacoes, incertos: parsed.incertos || [] };
+      cronoIAEstado = 'revisao';
+      render();
+    } catch(e) {
+      console.error(e);
+      cronoIAEstado = 'entrada';
+      render();
+      toast('Erro ao interpretar. Verifique sua chave de API e tente novamente.');
+    }
+  }
+
+  // ── Render de revisão ──
+
+  function _renderCronoRevisaoMontar() {
+    var rev = cronoIARevisao;
+    var etapas = rev.etapas || [];
+    var html = '<div class="card-title">REVISE AS ETAPAS</div>';
+    html += '<p style="font-size:12px;color:var(--ink-3);margin-bottom:12px;">Desmarque etapas que não quiser. Edite datas se necessário.</p>';
+    etapas.forEach(function(e, i) {
+      html += '<div class="lanc-item' + (e.incluir ? '' : ' desmarcado') + '" id="crono-rev-etapa-' + i + '" style="flex-direction:column;align-items:stretch;gap:6px;">';
+      html += '<div style="display:flex;align-items:center;gap:8px;">';
+      html += '<input type="checkbox" class="lanc-item-check" ' + (e.incluir ? 'checked' : '') + ' onchange="toggleCronoEtapa(' + i + ',this.checked)">';
+      html += '<span style="font-size:13px;font-weight:700;color:var(--ink);">Etapa ' + (i+1) + ' — ' + escapeHtml(e.nome) + (e.incerto ? ' <span style="color:var(--amber);font-size:11px;">⚠ incerto</span>' : '') + '</span>';
+      html += '</div>';
+      html += '<div style="display:flex;gap:6px;flex-wrap:wrap;">';
+      html += '<div style="flex:1;min-width:120px;"><label style="font-size:11px;color:var(--ink-3);">Início</label>';
+      html += '<input type="date" value="' + escapeHtml(e.dataInicioPrevisto||'') + '" oninput="setCronoEtapaField(' + i + ',\'dataInicioPrevisto\',this.value)" style="width:100%;font-size:12px;"></div>';
+      html += '<div style="flex:1;min-width:120px;"><label style="font-size:11px;color:var(--ink-3);">Término</label>';
+      html += '<input type="date" value="' + escapeHtml(e.dataFimPrevisto||'') + '" oninput="setCronoEtapaField(' + i + ',\'dataFimPrevisto\',this.value)" style="width:100%;font-size:12px;"></div>';
+      html += '</div>';
+      html += '<textarea rows="2" oninput="setCronoEtapaField(' + i + ',\'descricao\',this.value)" style="width:100%;font-size:12px;">' + escapeHtml(e.descricao||'') + '</textarea>';
+      html += '</div>';
+    });
+    if (rev.incertos && rev.incertos.length > 0) {
+      html += '<div class="lanc-secao" style="margin-top:10px;"><div class="lanc-secao-titulo">Itens incertos — não serão gravados</div>';
+      rev.incertos.forEach(function(t) { html += '<div class="lanc-incerto">' + escapeHtml(String(t)) + '</div>'; });
+      html += '</div>';
+    }
+    var n = etapas.filter(function(e) { return e.incluir; }).length;
+    html += '<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:12px;">';
+    html += '<button class="btn-primary" onclick="confirmarCronoMontar()" style="flex:1;margin-top:0;">Confirmar e Salvar (' + n + ' etapa' + (n!==1?'s':'') + ')</button>';
+    html += '<button class="btn-secondary" onclick="cancelarCronoIA()" style="width:auto;margin-top:0;">Cancelar</button>';
+    html += '</div>';
+    return html;
+  }
+
+  function _renderCronoRevisaoAndamento(etapasObra) {
+    var rev = cronoIARevisao;
+    var ats = rev.atualizacoes || [];
+    var html = '<div class="card-title">REVISE O ANDAMENTO</div>';
+    html += '<p style="font-size:12px;color:var(--ink-3);margin-bottom:12px;">Desmarque itens que não quiser. Edite valores se necessário.</p>';
+    var stOpts = [['nao_iniciada','Não iniciada'],['em_andamento','Em andamento'],['concluida','Concluída']];
+    ats.forEach(function(a, i) {
+      var etapa = etapasObra.find(function(e) { return e.id === a.etapaId; });
+      if (!etapa) return;
+      html += '<div class="lanc-item' + (a.incluir ? '' : ' desmarcado') + '" id="crono-rev-at-' + i + '">';
+      html += '<input type="checkbox" class="lanc-item-check" ' + (a.incluir ? 'checked' : '') + ' onchange="toggleCronoAt(' + i + ',this.checked)">';
+      html += '<div class="lanc-item-body">';
+      html += '<div class="lanc-item-label">' + escapeHtml(etapa.nome) + (a.incerto ? ' <span style="color:var(--amber);font-size:11px;">⚠ incerto</span>' : '') + '</div>';
+      html += '<div class="lanc-item-sub">Atual: ' + (Number(etapa.percentual)||0) + '% → Novo: ' + a.percentual + '%</div>';
+      html += '<div class="lanc-item-fields">';
+      html += '<input type="number" min="0" max="100" value="' + a.percentual + '" oninput="setCronoAtField(' + i + ',\'percentual\',this.value)" style="width:70px;">';
+      html += '<select onchange="setCronoAtField(' + i + ',\'status\',this.value)">';
+      stOpts.forEach(function(o) { html += '<option value="' + o[0] + '"' + (a.status === o[0] ? ' selected' : '') + '>' + o[1] + '</option>'; });
+      html += '</select>';
+      html += '</div></div></div>';
+    });
+    if (rev.incertos && rev.incertos.length > 0) {
+      html += '<div class="lanc-secao" style="margin-top:10px;"><div class="lanc-secao-titulo">Itens incertos — não serão gravados</div>';
+      rev.incertos.forEach(function(t) { html += '<div class="lanc-incerto">' + escapeHtml(String(t)) + '</div>'; });
+      html += '</div>';
+    }
+    var n = ats.filter(function(a) { return a.incluir; }).length;
+    html += '<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:12px;">';
+    html += '<button class="btn-primary" onclick="confirmarCronoAndamento()" style="flex:1;margin-top:0;">Confirmar Andamento (' + n + ' etapa' + (n!==1?'s':'') + ')</button>';
+    html += '<button class="btn-secondary" onclick="cancelarCronoIA()" style="width:auto;margin-top:0;">Cancelar</button>';
+    html += '</div>';
+    return html;
+  }
+
+  // ── Confirmar ──
+
+  function confirmarCronoMontar() {
+    var obra = getObra(obraAtualId);
+    if (!obra || !cronoIARevisao) return;
+    if (!obra.cronograma) obra.cronograma = { etapas: [] };
+    var etapas = (cronoIARevisao.etapas || []).filter(function(e) { return e.incluir && e.nome; });
+    var ordemBase = obra.cronograma.etapas.length;
+    etapas.forEach(function(e, i) {
+      obra.cronograma.etapas.push({
+        id: 'etapa_' + Date.now() + '_' + i + '_' + Math.random().toString(36).slice(2,5),
+        nome: e.nome.trim(),
+        descricao: (e.descricao || '').trim(),
+        dataInicioPrevisto: e.dataInicioPrevisto || '',
+        dataFimPrevisto: e.dataFimPrevisto || '',
+        ordem: ordemBase + i + 1,
+        percentual: 0,
+        status: 'nao_iniciada',
+        criadaEm: new Date().toISOString()
+      });
+    });
+    salvar();
+    cronoIAEstado = 'gravado';
+    toast(etapas.length + ' etapa' + (etapas.length!==1?'s':'') + ' adicionada' + (etapas.length!==1?'s':'') + ' ao cronograma!');
+    render();
+  }
+
+  function confirmarCronoAndamento() {
+    var obra = getObra(obraAtualId);
+    if (!obra || !cronoIARevisao || !obra.cronograma) return;
+    var ats = (cronoIARevisao.atualizacoes || []).filter(function(a) { return a.incluir; });
+    ats.forEach(function(a) {
+      var idx = obra.cronograma.etapas.findIndex(function(e) { return e.id === a.etapaId; });
+      if (idx === -1) return;
+      obra.cronograma.etapas[idx].percentual = Math.min(100, Math.max(0, Number(a.percentual) || 0));
+      obra.cronograma.etapas[idx].status = a.status || 'nao_iniciada';
+    });
+    salvar();
+    cronoIAEstado = 'gravado';
+    toast(ats.length + ' etapa' + (ats.length!==1?'s':'') + ' atualizada' + (ats.length!==1?'s':'') + '!');
+    render();
+  }
+
+  // In-place toggles (sem re-render)
+  function toggleCronoEtapa(idx, checked) {
+    if (!cronoIARevisao || !cronoIARevisao.etapas) return;
+    cronoIARevisao.etapas[idx].incluir = checked;
+    var el = document.getElementById('crono-rev-etapa-' + idx);
+    if (el) el.classList.toggle('desmarcado', !checked);
+  }
+  function setCronoEtapaField(idx, campo, valor) {
+    if (!cronoIARevisao || !cronoIARevisao.etapas) return;
+    cronoIARevisao.etapas[idx][campo] = valor;
+  }
+  function toggleCronoAt(idx, checked) {
+    if (!cronoIARevisao || !cronoIARevisao.atualizacoes) return;
+    cronoIARevisao.atualizacoes[idx].incluir = checked;
+    var el = document.getElementById('crono-rev-at-' + idx);
+    if (el) el.classList.toggle('desmarcado', !checked);
+  }
+  function setCronoAtField(idx, campo, valor) {
+    if (!cronoIARevisao || !cronoIARevisao.atualizacoes) return;
+    cronoIARevisao.atualizacoes[idx][campo] = campo === 'percentual' ? Number(valor) : valor;
+  }
+
+  function cancelarCronoIA() { cronoIAEstado = 'entrada'; cronoIARevisao = null; render(); }
+  function novoCronoIA()     { cronoIAEstado = 'entrada'; cronoIARevisao = null; cronoIATexto = ''; render(); }
+
+  // ── PDF 1: Cronograma da Obra ──
+
+  function gerarPDFCronograma() {
+    var obra = getObra(obraAtualId);
+    if (!obra) return;
+    var etapas = (obra.cronograma && obra.cronograma.etapas) || [];
+    if (etapas.length === 0) { alert('Cadastre ao menos uma etapa no cronograma antes de gerar o PDF.'); return; }
+    function _doGerar(logoURL) {
+      if (window.jspdf) { _gerarPDFCronograma(obra, logoURL); return; }
+      var s = document.createElement('script');
+      s.src = 'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js';
+      s.onload = function() { _gerarPDFCronograma(obra, logoURL); };
+      document.head.appendChild(s);
+    }
+    _fetchLogoDataURL(_doGerar);
+  }
+
+  function _gerarPDFCronograma(obra, logoURL) {
+    var jsPDF = window.jspdf.jsPDF;
+    var doc = new jsPDF({ unit: 'mm', format: 'a4' });
+    var PW = 210, PH = 297, ML = 15, CW = 180;
+    var info = obra.info || {};
+    var etapas = (obra.cronograma && obra.cronograma.etapas) || [];
+
+    var mesNomes = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
+
+    function addHeader() {
+      doc.setFillColor(115, 1, 140);
+      doc.rect(0, 0, PW, 14, 'F');
+      doc.setTextColor(255,255,255); doc.setFont('helvetica','bold'); doc.setFontSize(8);
+      doc.text('AS CONSTRUCTION', ML, 9);
+      doc.setFont('helvetica','normal');
+      doc.text('Cronograma da Obra', PW - ML, 9, { align: 'right' });
+      doc.setTextColor(30,30,30);
+    }
+
+    function checkY(y, extra) { extra = extra || 10; if (y + extra > PH - 18) { doc.addPage(); addHeader(); return 22; } return y; }
+
+    function secTitle(y, txt) {
+      y = checkY(y, 12);
+      doc.setFillColor(245, 240, 250); doc.rect(ML, y, CW, 7, 'F');
+      doc.setTextColor(115,1,140); doc.setFont('helvetica','bold'); doc.setFontSize(9);
+      doc.text(txt, ML + 3, y + 5);
+      doc.setTextColor(30,30,30); doc.setFont('helvetica','normal');
+      return y + 11;
+    }
+
+    // ── CAPA ──
+    doc.setFillColor(115, 1, 140);
+    doc.rect(0, 0, PW, 38, 'F');
+    if (logoURL) { try { doc.addImage(logoURL, 'PNG', ML, 6, 44, 22); } catch(e) {} }
+    doc.setTextColor(255,255,255); doc.setFont('helvetica','normal'); doc.setFontSize(9);
+    doc.text('AS CONSTRUCTION', PW - ML, 14, { align: 'right' });
+
+    doc.setTextColor(30,30,30);
+    doc.setFont('helvetica','bold'); doc.setFontSize(10);
+    doc.text('CRONOGRAMA DA OBRA', PW/2, 60, { align: 'center' });
+    doc.setFont('helvetica','bold'); doc.setFontSize(15);
+    doc.text(obra.nome || '', PW/2, 74, { align: 'center' });
+    if (info.clienteRazaoSocial) {
+      doc.setFont('helvetica','normal'); doc.setFontSize(11);
+      doc.text(info.clienteRazaoSocial, PW/2, 84, { align: 'center' });
+    }
+    doc.setFont('helvetica','normal'); doc.setFontSize(9); doc.setTextColor(100,100,100);
+    doc.text('Emitido em: ' + dateBR(hojeISO()), PW/2, 96, { align: 'center' });
+
+    doc.setFontSize(8); doc.setTextColor(150,150,150);
+    doc.text('AS Construction  ·  Pág. 1', PW/2, PH - 8, { align: 'center' });
+
+    // ── CORPO ──
+    doc.addPage(); addHeader();
+    var y = 24;
+
+    // 1. Dados da obra
+    y = secTitle(y, '1. DADOS DA OBRA');
+    doc.setFont('helvetica','bold'); doc.setFontSize(8.5); doc.setTextColor(100,100,100);
+    doc.text('Obra:', ML, y);
+    doc.setFont('helvetica','normal'); doc.setTextColor(30,30,30);
+    var nomeLines = doc.splitTextToSize(obra.nome || '', CW - 28);
+    doc.text(nomeLines, ML + 28, y);
+    y += Math.max(6, nomeLines.length * 5);
+
+    if (info.clienteRazaoSocial) {
+      y = checkY(y, 7);
+      doc.setFont('helvetica','bold'); doc.setTextColor(100,100,100);
+      doc.text('Cliente:', ML, y);
+      doc.setFont('helvetica','normal'); doc.setTextColor(30,30,30);
+      doc.text(info.clienteRazaoSocial, ML + 28, y);
+      y += 7;
+    }
+
+    if (etapas.length > 0) {
+      var datasValidas = etapas.filter(function(e) { return e.dataInicioPrevisto && e.dataFimPrevisto; });
+      if (datasValidas.length > 0) {
+        var iniGeral = datasValidas.reduce(function(a,b) { return b.dataInicioPrevisto < a ? b.dataInicioPrevisto : a; }, datasValidas[0].dataInicioPrevisto);
+        var fimGeral = datasValidas.reduce(function(a,b) { return b.dataFimPrevisto > a ? b.dataFimPrevisto : a; }, datasValidas[0].dataFimPrevisto);
+        var diasTotal = _diasEntre(iniGeral, fimGeral);
+        y = checkY(y, 7);
+        doc.setFont('helvetica','bold'); doc.setTextColor(100,100,100);
+        doc.text('Período:', ML, y);
+        doc.setFont('helvetica','normal'); doc.setTextColor(30,30,30);
+        doc.text(dateBR(iniGeral) + ' → ' + dateBR(fimGeral) + '  (' + diasTotal + ' dias)', ML + 28, y);
+        y += 7;
+      }
+    }
+    y += 4;
+
+    // 2. Etapas
+    y = secTitle(y, '2. ETAPAS DO CRONOGRAMA');
+
+    // Cabeçalho da tabela
+    var cols = { n: ML, nome: ML+8, ini: ML+68, fim: ML+104, dur: ML+140, desc: ML+162 };
+    doc.setFillColor(240,240,245); doc.rect(ML, y, CW, 7, 'F');
+    doc.setFont('helvetica','bold'); doc.setFontSize(7.5); doc.setTextColor(80,80,80);
+    doc.text('Nº', cols.n, y+5);
+    doc.text('ETAPA', cols.nome, y+5);
+    doc.text('INÍCIO', cols.ini, y+5);
+    doc.text('TÉRMINO', cols.fim, y+5);
+    doc.text('DURAÇÃO', cols.dur, y+5);
+    y += 9;
+
+    etapas.forEach(function(e, i) {
+      var durTxt = '';
+      if (e.dataInicioPrevisto && e.dataFimPrevisto) {
+        var d = _diasEntre(e.dataInicioPrevisto, e.dataFimPrevisto);
+        durTxt = d + ' dia' + (d!==1?'s':'');
+      }
+      var nomeLines = doc.splitTextToSize(e.nome || '', 55);
+      var descLines = e.descricao ? doc.splitTextToSize(e.descricao, CW - 6) : [];
+      var rowH = Math.max(8, nomeLines.length * 5) + (descLines.length > 0 ? descLines.length * 4.5 + 3 : 0);
+      y = checkY(y, rowH + 2);
+
+      if (i % 2 === 0) { doc.setFillColor(252,250,254); doc.rect(ML, y-1, CW, rowH + 2, 'F'); }
+      doc.setFont('helvetica','bold'); doc.setFontSize(8.5); doc.setTextColor(115,1,140);
+      doc.text(String(i+1), cols.n, y+4);
+      doc.setTextColor(30,30,30);
+      doc.text(nomeLines, cols.nome, y+4);
+      doc.setFont('helvetica','normal'); doc.setFontSize(8);
+      doc.text(e.dataInicioPrevisto ? dateBR(e.dataInicioPrevisto) : '—', cols.ini, y+4);
+      doc.text(e.dataFimPrevisto   ? dateBR(e.dataFimPrevisto)    : '—', cols.fim, y+4);
+      doc.text(durTxt, cols.dur, y+4);
+      if (descLines.length > 0) {
+        var descY = y + Math.max(7, nomeLines.length * 5) + 1;
+        doc.setTextColor(100,100,100); doc.setFontSize(7.5);
+        doc.text(descLines, cols.nome, descY);
+        doc.setTextColor(30,30,30);
+      }
+      y += rowH + 4;
+    });
+    y += 4;
+
+    // 3. Linha do tempo (Gantt quinzenal)
+    var datasValidas2 = etapas.filter(function(e) { return e.dataInicioPrevisto && e.dataFimPrevisto; });
+    if (datasValidas2.length > 0) {
+      y = secTitle(y, '3. LINHA DO TEMPO');
+      var iniG2 = datasValidas2.reduce(function(a,b){ return b.dataInicioPrevisto<a?b.dataInicioPrevisto:a; }, datasValidas2[0].dataInicioPrevisto);
+      var fimG2 = datasValidas2.reduce(function(a,b){ return b.dataFimPrevisto>a?b.dataFimPrevisto:a; }, datasValidas2[0].dataFimPrevisto);
+
+      // Calcular quinzenas abrangidas
+      var quins = [];
+      var cur = new Date(iniG2 + 'T12:00:00');
+      cur.setDate(1);
+      var fimDate = new Date(fimG2 + 'T12:00:00');
+      fimDate.setMonth(fimDate.getMonth()+1); fimDate.setDate(1);
+      while (cur < fimDate) {
+        var m = cur.getMonth(), a = cur.getFullYear();
+        quins.push({ ano: a, mes: m, q: 1, ini: a + '-' + String(m+1).padStart(2,'0') + '-01', fim: a + '-' + String(m+1).padStart(2,'0') + '-15' });
+        var lastDay = new Date(a, m+1, 0).getDate();
+        quins.push({ ano: a, mes: m, q: 2, ini: a + '-' + String(m+1).padStart(2,'0') + '-16', fim: a + '-' + String(m+1).padStart(2,'0') + '-' + String(lastDay).padStart(2,'0') });
+        cur.setMonth(cur.getMonth()+1);
+      }
+
+      var colNome = 42, ganttX = ML + colNome, colW = Math.min(10, Math.floor(CW - colNome) / quins.length);
+      var ganttW = quins.length * colW;
+      y = checkY(y, 12 + etapas.length * 8 + 20);
+
+      // Cabeçalho meses (agrupado)
+      var mesGrupos = [];
+      var lastM = -1;
+      quins.forEach(function(q, i) {
+        if (q.mes !== lastM) { mesGrupos.push({ mes: q.mes, ano: q.ano, startIdx: i, count: 0 }); lastM = q.mes; }
+        mesGrupos[mesGrupos.length-1].count++;
+      });
+      doc.setFont('helvetica','bold'); doc.setFontSize(7); doc.setTextColor(80,80,80);
+      mesGrupos.forEach(function(g) {
+        var mx = ganttX + g.startIdx * colW;
+        doc.setFillColor(235,228,245); doc.rect(mx, y, g.count * colW, 5, 'F');
+        doc.setTextColor(115,1,140);
+        doc.text(mesNomes[g.mes].substring(0,3).toUpperCase() + '/' + String(g.ano).slice(2), mx + (g.count*colW/2), y+3.5, { align: 'center' });
+      });
+      y += 5;
+
+      // Indicadores quinzena
+      doc.setFont('helvetica','normal'); doc.setFontSize(6); doc.setTextColor(130,130,130);
+      quins.forEach(function(q, i) {
+        var qx = ganttX + i * colW;
+        doc.text(q.q === 1 ? '1ª' : '2ª', qx + colW/2, y+3.5, { align: 'center' });
+        doc.setDrawColor(210,210,210);
+        doc.line(qx, y, qx, y + 5 + etapas.length * 8);
+      });
+      y += 5;
+
+      // Linhas por etapa
+      etapas.forEach(function(e, ei) {
+        y = checkY(y, 8);
+        doc.setFont('helvetica','normal'); doc.setFontSize(7.5); doc.setTextColor(30,30,30);
+        var nomeLabel = doc.splitTextToSize(e.nome || '', colNome - 4);
+        doc.text(nomeLabel[0] || '', ML, y+5);
+        if (nomeLabel.length > 1) doc.text(nomeLabel[1], ML, y+9);
+
+        quins.forEach(function(q, qi) {
+          var qx = ganttX + qi * colW;
+          var ativa = e.dataInicioPrevisto && e.dataFimPrevisto && q.fim >= e.dataInicioPrevisto && q.ini <= e.dataFimPrevisto;
+          if (ativa) {
+            doc.setFillColor(115, 1, 140);
+          } else {
+            doc.setFillColor(230, 225, 240);
+          }
+          doc.rect(qx + 0.5, y + 1.5, colW - 1, 5, 'F');
+        });
+        y += 8;
+      });
+
+      // Legenda
+      y += 4;
+      doc.setFillColor(115,1,140); doc.rect(ML, y, 6, 4, 'F');
+      doc.setFont('helvetica','normal'); doc.setFontSize(7); doc.setTextColor(80,80,80);
+      doc.text('Duração prevista', ML+8, y+3);
+      y += 10;
+    }
+
+    // Rodapé páginas
+    var totalPgs = doc.getNumberOfPages();
+    for (var pg = 1; pg <= totalPgs; pg++) {
+      doc.setPage(pg);
+      doc.setFont('helvetica','normal'); doc.setFontSize(7); doc.setTextColor(150,150,150);
+      doc.text('AS Construction  ·  Cronograma da Obra  ·  ' + dateBR(hojeISO()), PW/2, PH-5, { align: 'center' });
+      doc.text('Pág. ' + pg + ' / ' + totalPgs, PW - ML, PH-5, { align: 'right' });
+    }
+
+    var slug = (obra.nome || 'obra').toLowerCase().replace(/[^a-z0-9]+/g, '-').slice(0, 30);
+    doc.save('cronograma-' + slug + '.pdf');
+  }
+
+  // ── PDF 2: Relatório de Andamento ──
+
+  function gerarRelatorioAndamento() {
+    var obra = getObra(obraAtualId);
+    if (!obra) return;
+    var etapas = (obra.cronograma && obra.cronograma.etapas) || [];
+    if (etapas.length === 0) { alert('Cadastre etapas no cronograma antes de gerar o relatório.'); return; }
+    function _doGerar(logoURL) {
+      if (window.jspdf) { _gerarRelatorioAndamento(obra, logoURL); return; }
+      var s = document.createElement('script');
+      s.src = 'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js';
+      s.onload = function() { _gerarRelatorioAndamento(obra, logoURL); };
+      document.head.appendChild(s);
+    }
+    _fetchLogoDataURL(_doGerar);
+  }
+
+  function _gerarRelatorioAndamento(obra, logoURL) {
+    var jsPDF = window.jspdf.jsPDF;
+    var doc = new jsPDF({ unit: 'mm', format: 'a4' });
+    var PW = 210, PH = 297, ML = 15, CW = 180;
+    var info = obra.info || {};
+    var etapas = (obra.cronograma && obra.cronograma.etapas) || [];
+    var hoje = hojeISO();
+    var mesNomes = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
+
+    // Período do relatório: últimos 15 dias
+    var hojeDate = new Date(hoje + 'T12:00:00');
+    var iniPeriodo = new Date(hojeDate); iniPeriodo.setDate(iniPeriodo.getDate() - 14);
+    var iniPeriodoISO = iniPeriodo.toISOString().slice(0,10);
+    var dia = hojeDate.getDate(), mes = hojeDate.getMonth(), ano = hojeDate.getFullYear();
+    var quinzena = dia <= 15 ? '1ª Quinzena' : '2ª Quinzena';
+    var periodoLabel = quinzena + ' · ' + mesNomes[mes] + '/' + ano;
+
+    function addHeader() {
+      doc.setFillColor(115, 1, 140); doc.rect(0, 0, PW, 14, 'F');
+      doc.setTextColor(255,255,255); doc.setFont('helvetica','bold'); doc.setFontSize(8);
+      doc.text('AS CONSTRUCTION', ML, 9);
+      doc.setFont('helvetica','normal');
+      doc.text('Relatório de Andamento', PW - ML, 9, { align: 'right' });
+      doc.setTextColor(30,30,30);
+    }
+
+    function checkY(y, extra) { extra = extra||10; if (y + extra > PH - 18) { doc.addPage(); addHeader(); return 22; } return y; }
+
+    function secTitle(y, txt) {
+      y = checkY(y, 12);
+      doc.setFillColor(245, 240, 250); doc.rect(ML, y, CW, 7, 'F');
+      doc.setTextColor(115,1,140); doc.setFont('helvetica','bold'); doc.setFontSize(9);
+      doc.text(txt, ML+3, y+5);
+      doc.setTextColor(30,30,30); doc.setFont('helvetica','normal');
+      return y + 11;
+    }
+
+    // ── CAPA ──
+    doc.setFillColor(115, 1, 140); doc.rect(0, 0, PW, 38, 'F');
+    if (logoURL) { try { doc.addImage(logoURL, 'PNG', ML, 6, 44, 22); } catch(e) {} }
+    doc.setTextColor(255,255,255); doc.setFont('helvetica','normal'); doc.setFontSize(9);
+    doc.text('AS CONSTRUCTION', PW-ML, 14, { align: 'right' });
+
+    doc.setTextColor(30,30,30);
+    doc.setFont('helvetica','bold'); doc.setFontSize(10);
+    doc.text('RELATÓRIO DE ANDAMENTO', PW/2, 60, { align: 'center' });
+    doc.setFont('helvetica','bold'); doc.setFontSize(15);
+    doc.text(obra.nome || '', PW/2, 74, { align: 'center' });
+    if (info.clienteRazaoSocial) {
+      doc.setFont('helvetica','normal'); doc.setFontSize(11);
+      doc.text(info.clienteRazaoSocial, PW/2, 84, { align: 'center' });
+    }
+    doc.setFont('helvetica','normal'); doc.setFontSize(9); doc.setTextColor(80,80,80);
+    doc.text('Período: ' + periodoLabel, PW/2, 94, { align: 'center' });
+    doc.setTextColor(100,100,100);
+    doc.text('Data: ' + dateBR(hoje), PW/2, 102, { align: 'center' });
+    doc.setFontSize(8); doc.setTextColor(150,150,150);
+    doc.text('AS Construction  ·  Pág. 1', PW/2, PH-8, { align: 'center' });
+
+    // ── CORPO ──
+    doc.addPage(); addHeader();
+    var y = 24;
+
+    // 1. Andamento Geral
+    y = secTitle(y, '1. ANDAMENTO GERAL');
+    var pctGeral = _pctGeralCronograma(etapas);
+    var concluidas = etapas.filter(function(e){ return e.status==='concluida'; }).length;
+
+    doc.setFont('helvetica','bold'); doc.setFontSize(8.5); doc.setTextColor(100,100,100);
+    doc.text('Conclusão geral:', ML, y);
+    doc.setFont('helvetica','bold'); doc.setFontSize(20); doc.setTextColor(115,1,140);
+    doc.text(pctGeral + '%', ML + 44, y+1);
+    doc.setTextColor(30,30,30); doc.setFont('helvetica','normal'); doc.setFontSize(8.5);
+    y += 8;
+
+    // Barra geral
+    var barW = CW;
+    doc.setFillColor(220,215,235); doc.rect(ML, y, barW, 6, 'F');
+    if (pctGeral > 0) { doc.setFillColor(115,1,140); doc.rect(ML, y, barW * pctGeral / 100, 6, 'F'); }
+    y += 10;
+
+    doc.setTextColor(80,80,80); doc.setFontSize(8);
+    doc.text('Etapas concluídas: ' + concluidas + ' de ' + etapas.length, ML, y);
+    y += 6;
+    doc.text('Período do relatório: ' + dateBR(iniPeriodoISO) + ' a ' + dateBR(hoje), ML, y);
+    y += 10;
+
+    // 2. Status por etapa
+    y = secTitle(y, '2. STATUS POR ETAPA');
+
+    // Cabeçalho tabela
+    doc.setFillColor(240,240,245); doc.rect(ML, y, CW, 7, 'F');
+    doc.setFont('helvetica','bold'); doc.setFontSize(7); doc.setTextColor(80,80,80);
+    var cols2 = { nome: ML+2, prazo: ML+60, pct: ML+108, status: ML+122, sit: ML+152 };
+    doc.text('ETAPA', cols2.nome, y+5);
+    doc.text('PRAZO PREVISTO', cols2.prazo, y+5);
+    doc.text('%', cols2.pct, y+5);
+    doc.text('STATUS', cols2.status, y+5);
+    doc.text('SITUAÇÃO', cols2.sit, y+5);
+    y += 9;
+
+    etapas.forEach(function(e, ei) {
+      var ind = _calcIndicadorEtapa(e);
+      var pct = Number(e.percentual) || 0;
+      var stLabel = e.status==='concluida' ? 'Concluída' : e.status==='em_andamento' ? 'Em andamento' : 'Não iniciada';
+      var prazoTxt = (e.dataInicioPrevisto && e.dataFimPrevisto) ? dateBR(e.dataInicioPrevisto) + ' → ' + dateBR(e.dataFimPrevisto) : '—';
+      var nomeLines = doc.splitTextToSize(e.nome||'', 55);
+      var rowH = Math.max(8, nomeLines.length * 5);
+      y = checkY(y, rowH + 2);
+      if (ei % 2 === 0) { doc.setFillColor(252,250,254); doc.rect(ML, y-1, CW, rowH+2, 'F'); }
+
+      doc.setFont('helvetica','normal'); doc.setFontSize(8); doc.setTextColor(30,30,30);
+      doc.text(nomeLines, cols2.nome, y+4);
+      doc.setFontSize(7.5);
+      doc.text(prazoTxt, cols2.prazo, y+4);
+      doc.setFont('helvetica','bold'); doc.setTextColor(115,1,140);
+      doc.text(pct + '%', cols2.pct, y+4);
+      doc.setFont('helvetica','normal'); doc.setTextColor(30,30,30); doc.setFontSize(7.5);
+      doc.text(stLabel, cols2.status, y+4);
+      // Indicador colorido
+      var indColor = ind.pdfCor === 'green' ? [5,150,105] : ind.pdfCor === 'red' ? [220,38,38] : ind.pdfCor === 'amber' ? [217,119,6] : [150,150,150];
+      doc.setFont('helvetica','bold'); doc.setTextColor(indColor[0], indColor[1], indColor[2]);
+      doc.text(ind.label, cols2.sit, y+4);
+      doc.setTextColor(30,30,30); doc.setFont('helvetica','normal');
+      y += rowH + 4;
+    });
+    y += 4;
+
+    // 3. Progresso visual (barras por etapa)
+    y = secTitle(y, '3. PROGRESSO POR ETAPA');
+    etapas.forEach(function(e) {
+      y = checkY(y, 12);
+      var pct = Number(e.percentual) || 0;
+      var nomeLabel = doc.splitTextToSize(e.nome||'', 55);
+      doc.setFont('helvetica','normal'); doc.setFontSize(8); doc.setTextColor(30,30,30);
+      doc.text(nomeLabel[0]||'', ML, y+4);
+      var barX = ML+58, barW2 = CW-80, barH = 5;
+      doc.setFillColor(220,215,235); doc.rect(barX, y+1, barW2, barH, 'F');
+      var fillColor = e.status==='concluida' ? [5,150,105] : [115,1,140];
+      if (pct > 0) { doc.setFillColor(fillColor[0],fillColor[1],fillColor[2]); doc.rect(barX, y+1, barW2*pct/100, barH, 'F'); }
+      doc.setFont('helvetica','bold'); doc.setFontSize(7.5);
+      var indProg = _calcIndicadorEtapa(e);
+      var indC2 = indProg.pdfCor==='green'?[5,150,105]:indProg.pdfCor==='red'?[220,38,38]:indProg.pdfCor==='amber'?[217,119,6]:[150,150,150];
+      doc.setTextColor(115,1,140); doc.text(pct+'%', barX + barW2 + 3, y+5);
+      doc.setTextColor(indC2[0],indC2[1],indC2[2]); doc.text(indProg.label, barX + barW2 + 16, y+5);
+      doc.setTextColor(30,30,30);
+      y += 10;
+    });
+    y += 4;
+
+    // 4. Atividades do Diário no período
+    var diariosPeriodo = (obra.diario || []).filter(function(d) { return d.data >= iniPeriodoISO && d.data <= hoje; }).sort(function(a,b){ return a.data > b.data ? -1 : 1; });
+    if (diariosPeriodo.length > 0) {
+      y = secTitle(y, '4. ATIVIDADES EXECUTADAS NO PERÍODO');
+      diariosPeriodo.forEach(function(d) {
+        y = checkY(y, 14);
+        doc.setFont('helvetica','bold'); doc.setFontSize(7.5); doc.setTextColor(115,1,140);
+        doc.text(dateBR(d.data), ML, y+4);
+        doc.setFont('helvetica','normal'); doc.setTextColor(30,30,30);
+        var descLines = doc.splitTextToSize(d.descricao||'', CW-28);
+        doc.text(descLines, ML+28, y+4);
+        var badges = [];
+        if (d.percentual !== null && d.percentual !== undefined) badges.push(d.percentual + '%');
+        if (d.etapa) badges.push(d.etapa);
+        if (badges.length > 0) { doc.setTextColor(100,100,100); doc.text(badges.join(' · '), ML+28, y+4+descLines.length*5); }
+        y += Math.max(10, descLines.length * 5 + (badges.length > 0 ? 5 : 0) + 3);
+      });
+      y += 4;
+    }
+
+    // 5. Próximas etapas
+    var proximas = etapas.filter(function(e) { return e.status !== 'concluida'; }).slice(0, 4);
+    if (proximas.length > 0) {
+      y = secTitle(y, diariosPeriodo.length > 0 ? '5. PRÓXIMAS ETAPAS' : '4. PRÓXIMAS ETAPAS');
+      proximas.forEach(function(e) {
+        y = checkY(y, 8);
+        doc.setFont('helvetica','bold'); doc.setFontSize(8); doc.setTextColor(115,1,140);
+        doc.text('→', ML, y+4);
+        doc.setFont('helvetica','normal'); doc.setTextColor(30,30,30);
+        var txt = e.nome;
+        if (e.status === 'em_andamento' && e.dataFimPrevisto) {
+          var diasR = _diasEntre(hoje, e.dataFimPrevisto);
+          txt += ': conclusão prevista ' + dateBR(e.dataFimPrevisto) + (diasR >= 0 ? ' (' + diasR + ' dia' + (diasR!==1?'s':'') + ' restante' + (diasR!==1?'s':'') + ')' : ' — prazo vencido');
+        } else if (e.status === 'nao_iniciada' && e.dataInicioPrevisto) {
+          txt += ': início previsto ' + dateBR(e.dataInicioPrevisto);
+        }
+        var tLines = doc.splitTextToSize(txt, CW-8);
+        doc.text(tLines, ML+6, y+4);
+        y += Math.max(8, tLines.length * 5) + 3;
+      });
+      y += 4;
+    }
+
+    // Nota de rodapé do documento
+    y = checkY(y, 14);
+    doc.setDrawColor(200,190,215); doc.line(ML, y, ML+CW, y);
+    y += 6;
+    doc.setFont('helvetica','italic'); doc.setFontSize(7.5); doc.setTextColor(120,120,120);
+    doc.text('Documento emitido para liberação de pagamento/nota fiscal. Não contém informações financeiras internas.', ML, y);
+    y += 8;
+    doc.setFont('helvetica','bold'); doc.setTextColor(115,1,140);
+    doc.text('AS Construction', PW - ML, y, { align: 'right' });
+
+    // Numeração das páginas
+    var totalPgs = doc.getNumberOfPages();
+    for (var pg = 1; pg <= totalPgs; pg++) {
+      doc.setPage(pg);
+      doc.setFont('helvetica','normal'); doc.setFontSize(7); doc.setTextColor(150,150,150);
+      doc.text('AS Construction  ·  Relatório de Andamento  ·  ' + dateBR(hoje), PW/2, PH-5, { align: 'center' });
+      doc.text('Pág. ' + pg + ' / ' + totalPgs, PW-ML, PH-5, { align: 'right' });
+    }
+
+    var slug = (obra.nome||'obra').toLowerCase().replace(/[^a-z0-9]+/g,'-').slice(0,30);
+    doc.save('andamento-' + slug + '-' + hoje + '.pdf');
   }
 
   function inicializarAtmosphera() {
