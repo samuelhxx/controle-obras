@@ -5724,27 +5724,30 @@
         var d = _diasEntre(e.dataInicioPrevisto, e.dataFimPrevisto);
         durTxt = d + ' dia' + (d!==1?'s':'');
       }
-      var nomeLines = doc.splitTextToSize(e.nome || '', 55);
-      var descLines = e.descricao ? doc.splitTextToSize(e.descricao, CW - 6) : [];
-      var rowH = Math.max(8, nomeLines.length * 5) + (descLines.length > 0 ? descLines.length * 4.5 + 3 : 0);
+      var etNomeLines = doc.splitTextToSize(e.nome || '', 55);
+      var etDescLines = e.descricao ? doc.splitTextToSize(e.descricao, CW - 10) : [];
+      // leading=4, nome block, gap=2, desc block, trailing=3
+      var nomeBlockH = Math.max(5, etNomeLines.length * 5);
+      var descBlockH = etDescLines.length > 0 ? (2 + etDescLines.length * 4.5) : 0;
+      var rowH = Math.max(10, 4 + nomeBlockH + descBlockH + 3);
       y = checkY(y, rowH + 2);
 
       if (i % 2 === 0) { doc.setFillColor(252,250,254); doc.rect(ML, y-1, CW, rowH + 2, 'F'); }
       doc.setFont('helvetica','bold'); doc.setFontSize(8.5); doc.setTextColor(115,1,140);
       doc.text(String(i+1), cols.n, y+4);
       doc.setTextColor(30,30,30);
-      doc.text(nomeLines, cols.nome, y+4);
+      doc.text(etNomeLines, cols.nome, y+4);
       doc.setFont('helvetica','normal'); doc.setFontSize(8);
       doc.text(e.dataInicioPrevisto ? dateBR(e.dataInicioPrevisto) : '—', cols.ini, y+4);
       doc.text(e.dataFimPrevisto   ? dateBR(e.dataFimPrevisto)    : '—', cols.fim, y+4);
       doc.text(durTxt, cols.dur, y+4);
-      if (descLines.length > 0) {
-        var descY = y + Math.max(7, nomeLines.length * 5) + 1;
+      if (etDescLines.length > 0) {
+        var descY = y + 4 + nomeBlockH + 2;
         doc.setTextColor(100,100,100); doc.setFontSize(7.5);
-        doc.text(descLines, cols.nome, descY);
+        doc.text(etDescLines, cols.nome, descY);
         doc.setTextColor(30,30,30);
       }
-      y += rowH + 4;
+      y += rowH + 2;
     });
     y += 4;
 
@@ -5789,24 +5792,30 @@
       });
       y += 5;
 
+      // Calcular altura total real do Gantt para as linhas verticais
+      var ganttTotalH = etapas.reduce(function(acc, e) {
+        var nl = doc.splitTextToSize(e.nome || '', colNome - 4);
+        return acc + (nl.length > 1 ? 14 : 8);
+      }, 0);
+
       // Indicadores quinzena
       doc.setFont('helvetica','normal'); doc.setFontSize(6); doc.setTextColor(130,130,130);
       quins.forEach(function(q, i) {
         var qx = ganttX + i * colW;
         doc.text(q.q === 1 ? '1ª' : '2ª', qx + colW/2, y+3.5, { align: 'center' });
         doc.setDrawColor(210,210,210);
-        doc.line(qx, y, qx, y + 5 + etapas.length * 8);
+        doc.line(qx, y, qx, y + 5 + ganttTotalH);
       });
       y += 5;
 
       // Linhas por etapa
       etapas.forEach(function(e, ei) {
         var nomeLabel = doc.splitTextToSize(e.nome || '', colNome - 4);
-        var rowH = nomeLabel.length > 1 ? 13 : 8;
+        var rowH = nomeLabel.length > 1 ? 14 : 8;
         y = checkY(y, rowH);
         doc.setFont('helvetica','normal'); doc.setFontSize(7.5); doc.setTextColor(30,30,30);
         doc.text(nomeLabel[0] || '', ML, y+5);
-        if (nomeLabel.length > 1) doc.text(nomeLabel[1], ML, y+9);
+        if (nomeLabel.length > 1) doc.text(nomeLabel[1], ML, y+10);
 
         quins.forEach(function(q, qi) {
           var qx = ganttX + qi * colW;
