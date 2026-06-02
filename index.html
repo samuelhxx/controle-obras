@@ -5724,30 +5724,34 @@
         var d = _diasEntre(e.dataInicioPrevisto, e.dataFimPrevisto);
         durTxt = d + ' dia' + (d!==1?'s':'');
       }
+      // CRÍTICO: definir a fonte ANTES de splitTextToSize para obter quebras corretas
+      doc.setFont('helvetica','bold'); doc.setFontSize(8.5);
       var etNomeLines = doc.splitTextToSize(e.nome || '', 55);
+      doc.setFont('helvetica','normal'); doc.setFontSize(7.5);
       var etDescLines = e.descricao ? doc.splitTextToSize(e.descricao, CW - 10) : [];
-      // leading=4, nome block, gap=2, desc block, trailing=3
-      var nomeBlockH = Math.max(5, etNomeLines.length * 5);
-      var descBlockH = etDescLines.length > 0 ? (2 + etDescLines.length * 4.5) : 0;
-      var rowH = Math.max(10, 4 + nomeBlockH + descBlockH + 3);
+
+      var nomeBlockH = Math.max(6, etNomeLines.length * 6);
+      var descBlockH = etDescLines.length > 0 ? (3 + etDescLines.length * 5) : 0;
+      var rowH = Math.max(12, 5 + nomeBlockH + descBlockH + 4);
       y = checkY(y, rowH + 2);
 
       if (i % 2 === 0) { doc.setFillColor(252,250,254); doc.rect(ML, y-1, CW, rowH + 2, 'F'); }
       doc.setFont('helvetica','bold'); doc.setFontSize(8.5); doc.setTextColor(115,1,140);
-      doc.text(String(i+1), cols.n, y+4);
+      doc.text(String(i+1), cols.n, y+5);
       doc.setTextColor(30,30,30);
-      doc.text(etNomeLines, cols.nome, y+4);
-      doc.setFont('helvetica','normal'); doc.setFontSize(8);
-      doc.text(e.dataInicioPrevisto ? dateBR(e.dataInicioPrevisto) : '—', cols.ini, y+4);
-      doc.text(e.dataFimPrevisto   ? dateBR(e.dataFimPrevisto)    : '—', cols.fim, y+4);
-      doc.text(durTxt, cols.dur, y+4);
+      doc.text(etNomeLines, cols.nome, y+5);
+      doc.setFont('helvetica','normal'); doc.setFontSize(8); doc.setTextColor(60,60,60);
+      doc.text(e.dataInicioPrevisto ? dateBR(e.dataInicioPrevisto) : '—', cols.ini, y+5);
+      doc.text(e.dataFimPrevisto   ? dateBR(e.dataFimPrevisto)    : '—', cols.fim, y+5);
+      doc.text(durTxt, cols.dur, y+5);
+      doc.setTextColor(30,30,30);
       if (etDescLines.length > 0) {
-        var descY = y + 4 + nomeBlockH + 2;
+        var descY = y + 5 + nomeBlockH + 3;
         doc.setTextColor(100,100,100); doc.setFontSize(7.5);
         doc.text(etDescLines, cols.nome, descY);
         doc.setTextColor(30,30,30);
       }
-      y += rowH + 2;
+      y += rowH + 3;
     });
     y += 4;
 
@@ -5792,7 +5796,8 @@
       });
       y += 5;
 
-      // Calcular altura total real do Gantt para as linhas verticais
+      // Calcular altura total real do Gantt (com a fonte correta antes de split)
+      doc.setFont('helvetica','normal'); doc.setFontSize(7.5);
       var ganttTotalH = etapas.reduce(function(acc, e) {
         var nl = doc.splitTextToSize(e.nome || '', colNome - 4);
         return acc + (nl.length > 1 ? 14 : 8);
@@ -5810,10 +5815,12 @@
 
       // Linhas por etapa
       etapas.forEach(function(e, ei) {
+        // Fonte correta ANTES de splitTextToSize
+        doc.setFont('helvetica','normal'); doc.setFontSize(7.5);
         var nomeLabel = doc.splitTextToSize(e.nome || '', colNome - 4);
         var rowH = nomeLabel.length > 1 ? 14 : 8;
         y = checkY(y, rowH);
-        doc.setFont('helvetica','normal'); doc.setFontSize(7.5); doc.setTextColor(30,30,30);
+        doc.setTextColor(30,30,30);
         doc.text(nomeLabel[0] || '', ML, y+5);
         if (nomeLabel.length > 1) doc.text(nomeLabel[1], ML, y+10);
 
