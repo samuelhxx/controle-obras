@@ -3589,16 +3589,24 @@
     doc.setFont('helvetica', 'normal'); doc.setTextColor(0, 0, 0); doc.setFontSize(9);
     let totalGeral = 0;
     (obra.materiais || []).forEach(function(m) {
-      if (y > 270) { doc.addPage(); y = 20; }
+      var nomeLines = doc.splitTextToSize(m.nome, 100);
+      var fornLines = m.fornecedor ? doc.splitTextToSize(m.fornecedor, 100) : [];
+      var rowH = nomeLines.length * 5 + (fornLines.length > 0 ? fornLines.length * 4.5 + 1 : 0) + 3;
+      if (y + rowH > 270) { doc.addPage(); y = 20; }
       const total = Number(m.quantidade||0) * Number(m.valorUnit||0);
       totalGeral += total;
-      doc.text(m.nome.substring(0, 45), ML + 2, y);
+      doc.text(nomeLines, ML + 2, y);
       doc.text(String(m.quantidade), 120, y);
       doc.text(m.unidade, 138, y);
       doc.text('R$ ' + m.valorUnit.toLocaleString('pt-BR', {minimumFractionDigits:2}), 155, y);
       doc.text('R$ ' + total.toLocaleString('pt-BR', {minimumFractionDigits:2}), MR - 2, y, { align: 'right' });
-      if (m.fornecedor) { doc.setTextColor(130,130,130); doc.setFontSize(7.5); doc.text(m.fornecedor, ML + 2, y + 4); doc.setFontSize(9); doc.setTextColor(0,0,0); }
-      y += (m.fornecedor ? 10 : 7);
+      if (fornLines.length > 0) {
+        var fornY = y + nomeLines.length * 5;
+        doc.setTextColor(130,130,130); doc.setFontSize(7.5);
+        doc.text(fornLines, ML + 2, fornY);
+        doc.setFontSize(9); doc.setTextColor(0,0,0);
+      }
+      y += rowH;
       doc.setDrawColor(235, 235, 235); doc.line(ML, y - 1, MR, y - 1);
     });
 
@@ -3847,12 +3855,14 @@
     }
 
     function addField(y, label, value) {
+      var valLines = doc.splitTextToSize(value || '', MR - ML - 50);
+      var blockH = Math.max(7, valLines.length * 5.5);
       y = checkPage(y);
       doc.setFont('helvetica', 'bold'); doc.setFontSize(8.5); doc.setTextColor(100,100,100);
       doc.text(label, ML, y);
       doc.setFont('helvetica', 'normal'); doc.setTextColor(30,30,30);
-      doc.text(value || '', ML + 50, y);
-      return y + 7;
+      doc.text(valLines, ML + 50, y);
+      return y + blockH;
     }
 
     function addText(y, text, maxW) {
@@ -4347,7 +4357,8 @@
       doc.setFontSize(9);
       registros.forEach(function(d) {
         var descLines = doc.splitTextToSize(d.descricao, 112);
-        var lineH = Math.max(6, descLines.length * 4.5);
+        var etapaLines = d.etapa ? doc.splitTextToSize(d.etapa, 38) : [];
+        var lineH = Math.max(6, Math.max(descLines.length, etapaLines.length) * 5 + 2);
         if (y + lineH > PH - 20) {
           doc.setFontSize(8); doc.setTextColor(150, 150, 150);
           doc.text('Gerado em ' + todayStr + ' — AS Construction', PW / 2, PH - 8, { align: 'center' });
@@ -4367,8 +4378,7 @@
           doc.setFont('helvetica', 'normal');
           doc.setTextColor(20, 20, 20);
         }
-        if (d.etapa) {
-          var etapaLines = doc.splitTextToSize(d.etapa, 38);
+        if (etapaLines.length > 0) {
           doc.text(etapaLines, ML + 150, y);
         }
         y += lineH;
@@ -5791,9 +5801,10 @@
 
       // Linhas por etapa
       etapas.forEach(function(e, ei) {
-        y = checkY(y, 8);
-        doc.setFont('helvetica','normal'); doc.setFontSize(7.5); doc.setTextColor(30,30,30);
         var nomeLabel = doc.splitTextToSize(e.nome || '', colNome - 4);
+        var rowH = nomeLabel.length > 1 ? 13 : 8;
+        y = checkY(y, rowH);
+        doc.setFont('helvetica','normal'); doc.setFontSize(7.5); doc.setTextColor(30,30,30);
         doc.text(nomeLabel[0] || '', ML, y+5);
         if (nomeLabel.length > 1) doc.text(nomeLabel[1], ML, y+9);
 
@@ -5807,7 +5818,7 @@
           }
           doc.rect(qx + 0.5, y + 1.5, colW - 1, 5, 'F');
         });
-        y += 8;
+        y += rowH;
       });
 
       // Legenda
@@ -6003,17 +6014,19 @@
     if (diariosPeriodo.length > 0) {
       y = secTitle(y, '4. ATIVIDADES EXECUTADAS NO PERÍODO');
       diariosPeriodo.forEach(function(d) {
-        y = checkY(y, 14);
-        doc.setFont('helvetica','bold'); doc.setFontSize(7.5); doc.setTextColor(115,1,140);
-        doc.text(dateBR(d.data), ML, y+4);
-        doc.setFont('helvetica','normal'); doc.setTextColor(30,30,30);
         var descLines = doc.splitTextToSize(d.descricao||'', CW-28);
-        doc.text(descLines, ML+28, y+4);
         var badges = [];
         if (d.percentual !== null && d.percentual !== undefined) badges.push(d.percentual + '%');
         if (d.etapa) badges.push(d.etapa);
+        var blockH = Math.max(10, descLines.length * 5 + (badges.length > 0 ? 5 : 0) + 4);
+        y = checkY(y, blockH);
+        doc.setFont('helvetica','bold'); doc.setFontSize(7.5); doc.setTextColor(115,1,140);
+        doc.text(dateBR(d.data), ML, y+4);
+        doc.setFont('helvetica','normal'); doc.setTextColor(30,30,30);
+        doc.text(descLines, ML+28, y+4);
         if (badges.length > 0) { doc.setTextColor(100,100,100); doc.text(badges.join(' · '), ML+28, y+4+descLines.length*5); }
-        y += Math.max(10, descLines.length * 5 + (badges.length > 0 ? 5 : 0) + 3);
+        doc.setTextColor(30,30,30);
+        y += blockH;
       });
       y += 4;
     }
