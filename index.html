@@ -706,6 +706,9 @@
   let relatorioMes = hojeISO().substring(0, 7);
   let relatorioQuinzena = new Date().getDate() <= 15 ? 1 : 2;
   let relatorioTrabId = 'todos';
+  let relatorioPeriodoCustom = false;
+  let relatorioDataInicio = '';
+  let relatorioDataFim = '';
   let recebimentoModo = 'recebido';
   let materialEditandoId = null;
   let diarioEditandoId   = null;
@@ -1584,6 +1587,7 @@
     cronoIAModo          = 'montar';
     cronoIARevisao       = null;
     cronoIATexto         = '';
+    relatorioPeriodoCustom = false;
     render();
     window.scrollTo(0, 0);
   }
@@ -2444,13 +2448,22 @@
     let html = '<div class="card">';
     html += '<div class="card-title">FILTROS DO RELATÓRIO</div>';
 
+    html += '<div id="rel-mes-wrapper"' + (relatorioPeriodoCustom ? ' style="display:none;"' : '') + '>';
     html += '<label class="field-label">Mês</label>';
     html += '<input type="month" id="rel-mes" value="' + relatorioMes + '" onchange="atualizarPreviewRelatorio()">';
+    html += '</div>';
 
-    html += '<label class="field-label" style="margin-top:14px;">Quinzena</label>';
-    html += '<div class="rel-quinzena-pills">';
-    html += '<button class="rel-quinzena-pill' + (relatorioQuinzena === 1 ? ' active' : '') + '" data-q="1" onclick="setRelatorioQuinzena(1)">1ª Quinzena (dias 1–15)</button>';
-    html += '<button class="rel-quinzena-pill' + (relatorioQuinzena === 2 ? ' active' : '') + '" data-q="2" onclick="setRelatorioQuinzena(2)">2ª Quinzena (dias 16–fim)</button>';
+    html += '<label class="field-label" style="margin-top:14px;">Período</label>';
+    html += '<div class="rel-quinzena-pills" style="flex-wrap:wrap;">';
+    html += '<button class="rel-quinzena-pill' + (!relatorioPeriodoCustom && relatorioQuinzena === 1 ? ' active' : '') + '" data-q="1" onclick="setRelatorioQuinzena(1)">1ª Quinzena (dias 1–15)</button>';
+    html += '<button class="rel-quinzena-pill' + (!relatorioPeriodoCustom && relatorioQuinzena === 2 ? ' active' : '') + '" data-q="2" onclick="setRelatorioQuinzena(2)">2ª Quinzena (dias 16–fim)</button>';
+    html += '<button class="rel-quinzena-pill' + (relatorioPeriodoCustom ? ' active' : '') + '" onclick="setRelatorioPeriodoCustom()">Período personalizado</button>';
+    html += '</div>';
+    html += '<div id="rel-custom-dates" style="' + (relatorioPeriodoCustom ? '' : 'display:none;') + 'margin-top:10px;display:' + (relatorioPeriodoCustom ? 'grid' : 'none') + ';grid-template-columns:1fr 1fr;gap:8px;">';
+    html += '<div><label class="field-label">Data inicial</label>';
+    html += '<input type="date" id="rel-data-inicio" value="' + relatorioDataInicio + '" onchange="atualizarPreviewRelatorio()"></div>';
+    html += '<div><label class="field-label">Data final</label>';
+    html += '<input type="date" id="rel-data-fim" value="' + relatorioDataFim + '" onchange="atualizarPreviewRelatorio()"></div>';
     html += '</div>';
 
     html += '<label class="field-label">Trabalhador / Tipo</label>';
@@ -2489,9 +2502,31 @@
   }
 
   function setRelatorioQuinzena(q) {
+    relatorioPeriodoCustom = false;
     relatorioQuinzena = q;
-    document.querySelectorAll('.rel-quinzena-pill').forEach(p =>
+    // Show/hide custom date panel and month selector
+    const customDiv = document.getElementById('rel-custom-dates');
+    if (customDiv) customDiv.style.display = 'none';
+    const mesWrapper = document.getElementById('rel-mes-wrapper');
+    if (mesWrapper) mesWrapper.style.display = '';
+    // Update pill active states
+    document.querySelectorAll('.rel-quinzena-pill').forEach(p => p.classList.remove('active'));
+    document.querySelectorAll('.rel-quinzena-pill[data-q]').forEach(p =>
       p.classList.toggle('active', parseInt(p.dataset.q) === q));
+    atualizarPreviewRelatorio();
+  }
+
+  function setRelatorioPeriodoCustom() {
+    relatorioPeriodoCustom = true;
+    // Show custom date panel, hide month selector
+    const customDiv = document.getElementById('rel-custom-dates');
+    if (customDiv) customDiv.style.display = 'grid';
+    const mesWrapper = document.getElementById('rel-mes-wrapper');
+    if (mesWrapper) mesWrapper.style.display = 'none';
+    // Update pill active states
+    document.querySelectorAll('.rel-quinzena-pill').forEach(p => p.classList.remove('active'));
+    const pills = document.querySelectorAll('.rel-quinzena-pill:not([data-q])');
+    pills.forEach(p => p.classList.add('active'));
     atualizarPreviewRelatorio();
   }
 
@@ -2500,6 +2535,12 @@
     const trabEl = document.getElementById('rel-trab');
     if (mesEl) relatorioMes = mesEl.value || relatorioMes;
     if (trabEl) relatorioTrabId = trabEl.value;
+    if (relatorioPeriodoCustom) {
+      const inicioEl = document.getElementById('rel-data-inicio');
+      const fimEl = document.getElementById('rel-data-fim');
+      if (inicioEl) relatorioDataInicio = inicioEl.value;
+      if (fimEl) relatorioDataFim = fimEl.value;
+    }
     const el = document.getElementById('relatorio-preview');
     if (!el) return;
     const obra = getObra(obraAtualId);
@@ -2592,16 +2633,25 @@
   function buildRelatorioHTML(obra, mes, quinzena, trabId) {
     if (trabId === 'empreitadas') return _buildEmpreitadasPreviewHTML(obra);
     if (typeof trabId === 'string' && trabId.startsWith('emp:')) return _buildEmpreitadaUnicaPreviewHTML(obra, trabId.slice(4));
-    if (!mes) return '<div class="empty">Selecione um mês.</div>';
-    const parts = mes.split('-');
-    const ano = parseInt(parts[0]);
-    const mesNum = parseInt(parts[1]);
-    const mesNomes = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
-    const mesNome = mesNomes[mesNum - 1] || '';
-    const diaFim = quinzena === 1 ? 15 : new Date(ano, mesNum, 0).getDate();
-    const isoInicio = mes + '-' + (quinzena === 1 ? '01' : '16');
-    const isoFim = mes + '-' + String(diaFim).padStart(2, '0');
-    const periodoLabel = (quinzena === 1 ? '1ª Quinzena' : '2ª Quinzena') + ' — ' + mesNome + '/' + ano;
+    let isoInicio, isoFim, periodoLabel;
+    if (relatorioPeriodoCustom && relatorioDataInicio && relatorioDataFim) {
+      isoInicio = relatorioDataInicio;
+      isoFim = relatorioDataFim;
+      periodoLabel = 'Período: ' + dateBR(isoInicio) + ' a ' + dateBR(isoFim);
+    } else if (relatorioPeriodoCustom) {
+      return '<div class="empty">Informe a data inicial e a data final do período personalizado.</div>';
+    } else {
+      if (!mes) return '<div class="empty">Selecione um mês.</div>';
+      const mesNomes = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
+      const parts = mes.split('-');
+      const ano = parseInt(parts[0]);
+      const mesNum = parseInt(parts[1]);
+      const mesNome = mesNomes[mesNum - 1] || '';
+      const diaFim = quinzena === 1 ? 15 : new Date(ano, mesNum, 0).getDate();
+      isoInicio = mes + '-' + (quinzena === 1 ? '01' : '16');
+      isoFim = mes + '-' + String(diaFim).padStart(2, '0');
+      periodoLabel = (quinzena === 1 ? '1ª Quinzena' : '2ª Quinzena') + ' — ' + mesNome + '/' + ano;
+    }
 
     const diasPeriodo = (obra.diarias || []).filter(d => d.data >= isoInicio && d.data <= isoFim);
 
@@ -2917,15 +2967,24 @@
     const PW = 210; const PH = 297;
     const ML = 15; const MR = 15; const CW = PW - ML - MR;
 
-    const mesNomes = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
-    const parts = relatorioMes.split('-');
-    const ano = parseInt(parts[0]);
-    const mesNum = parseInt(parts[1]);
-    const mesNome = mesNomes[mesNum - 1] || '';
-    const diaFim = relatorioQuinzena === 1 ? 15 : new Date(ano, mesNum, 0).getDate();
-    const isoInicio = relatorioMes + '-' + (relatorioQuinzena === 1 ? '01' : '16');
-    const isoFim = relatorioMes + '-' + String(diaFim).padStart(2, '0');
-    const periodoLabel = (relatorioQuinzena === 1 ? '1ª Quinzena' : '2ª Quinzena') + ' — ' + mesNome + '/' + ano;
+    let isoInicio, isoFim, periodoLabel, filenameSuffix;
+    if (relatorioPeriodoCustom && relatorioDataInicio && relatorioDataFim) {
+      isoInicio = relatorioDataInicio;
+      isoFim = relatorioDataFim;
+      periodoLabel = dateBR(isoInicio) + ' a ' + dateBR(isoFim);
+      filenameSuffix = isoInicio + '_' + isoFim;
+    } else {
+      const mesNomes = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
+      const parts = relatorioMes.split('-');
+      const ano = parseInt(parts[0]);
+      const mesNum = parseInt(parts[1]);
+      const mesNome = mesNomes[mesNum - 1] || '';
+      const diaFim = relatorioQuinzena === 1 ? 15 : new Date(ano, mesNum, 0).getDate();
+      isoInicio = relatorioMes + '-' + (relatorioQuinzena === 1 ? '01' : '16');
+      isoFim = relatorioMes + '-' + String(diaFim).padStart(2, '0');
+      periodoLabel = (relatorioQuinzena === 1 ? '1ª Quinzena' : '2ª Quinzena') + ' — ' + mesNome + '/' + ano;
+      filenameSuffix = relatorioMes + '-Q' + relatorioQuinzena;
+    }
 
     const diasPeriodo = (obra.diarias || []).filter(d => d.data >= isoInicio && d.data <= isoFim);
     const grupos = {};
@@ -3065,7 +3124,7 @@
 
     addFooter();
     const trabNomeSlug = relatorioTrabId === 'todos' ? 'equipe' : (grupos[relatorioTrabId]?.nome || 'trabalhador').replace(/\s+/g, '-').toLowerCase();
-    doc.save('relatorio-' + trabNomeSlug + '-' + relatorioMes + '-Q' + relatorioQuinzena + '.pdf');
+    doc.save('relatorio-' + trabNomeSlug + '-' + filenameSuffix + '.pdf');
   }
 
   // ============ CALCULADORA ============
