@@ -1052,6 +1052,9 @@
     html += '<div class="margem">Margem: ' + c.margem.toFixed(1) + '%</div></div></div>';
 
     html += '</div>';
+    html += '<div style="margin-top:8px;">';
+    html += '<button class="btn-secondary saude-pdf-btn" onclick="gerarPDFSaude()" style="width:100%;">Relatório de Saúde da Obra</button>';
+    html += '</div>';
     return html;
   }
 
@@ -6150,6 +6153,326 @@
 
     var slug = (obra.nome||'obra').toLowerCase().replace(/[^a-z0-9]+/g,'-').slice(0,30);
     doc.save('andamento-' + slug + '-' + hoje + '.pdf');
+  }
+
+  // ============ RELATÓRIO DE SAÚDE DA OBRA ============
+
+  function gerarPDFSaude() {
+    const obra = getObra(obraAtualId);
+    if (!obra) return;
+    if (window.jspdf) {
+      _gerarPDFSaude(obra);
+    } else {
+      const btn = document.querySelector('.saude-pdf-btn');
+      if (btn) { btn.textContent = 'Carregando...'; btn.disabled = true; }
+      const s = document.createElement('script');
+      s.src = 'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js';
+      s.onload = function() {
+        if (btn) { btn.textContent = 'Relatório de Saúde da Obra'; btn.disabled = false; }
+        _gerarPDFSaude(obra);
+      };
+      s.onerror = function() { alert('Erro ao carregar biblioteca de PDF. Verifique sua conexão.'); };
+      document.head.appendChild(s);
+    }
+  }
+
+  function _gerarPDFSaude(obra) {
+    var { jsPDF } = window.jspdf;
+    var doc = new jsPDF({ unit: 'mm', format: 'a4' });
+    var PW = 210, PH = 297, ML = 15, MR = 15, CW = PW - ML - MR;
+    var c = calcularObra(obra);
+    var hoje = hojeISO();
+    var pageNum = 1;
+
+    function addHeader() {
+      doc.setFillColor(115, 1, 140);
+      doc.rect(0, 0, PW, 28, 'F');
+      doc.setTextColor(255, 255, 255);
+      doc.setFontSize(16); doc.setFont('helvetica', 'bold');
+      doc.text('AS CONSTRUCTION', ML, 11);
+      doc.setFontSize(9); doc.setFont('helvetica', 'normal');
+      doc.text('Relatório de Saúde da Obra — CONFIDENCIAL', ML, 18);
+      doc.text('Pág. ' + pageNum, PW - MR, 18, { align: 'right' });
+    }
+
+    function addFooter() {
+      doc.setTextColor(180, 180, 180);
+      doc.setFontSize(8); doc.setFont('helvetica', 'normal');
+      doc.text('Gerado em ' + dateBR(hoje) + ' — AS Construction | USO INTERNO', ML, PH - 8);
+    }
+
+    var y = 36;
+    addHeader();
+
+    var checkPage = function(needed) {
+      if (y + (needed || 10) > PH - 20) {
+        addFooter(); doc.addPage(); pageNum++; addHeader(); y = 36;
+      }
+    };
+
+    function secTitle(titulo) {
+      checkPage(14);
+      doc.setFillColor(115, 1, 140);
+      doc.rect(ML, y - 4, CW, 8, 'F');
+      doc.setTextColor(255, 255, 255);
+      doc.setFontSize(9); doc.setFont('helvetica', 'bold');
+      doc.text(titulo, ML + 2, y + 1);
+      doc.setTextColor(60, 60, 60);
+      y += 10;
+    }
+
+    function row(label, value, valorCor) {
+      checkPage(7);
+      doc.setFont('helvetica', 'normal'); doc.setFontSize(9);
+      doc.setTextColor(80, 80, 80);
+      doc.text(label, ML + 2, y);
+      if (valorCor) doc.setTextColor(valorCor[0], valorCor[1], valorCor[2]);
+      else doc.setTextColor(30, 30, 30);
+      doc.setFont('helvetica', 'bold');
+      doc.text(value, PW - MR - 2, y, { align: 'right' });
+      doc.setDrawColor(235, 235, 235);
+      doc.line(ML, y + 2, PW - MR, y + 2);
+      y += 7;
+    }
+
+    // ── Identificação ─────────────────────────────────────────────
+    checkPage(30);
+    doc.setTextColor(80, 80, 80); doc.setFontSize(9); doc.setFont('helvetica', 'normal');
+    doc.text('Obra:', ML, y); doc.setTextColor(30, 30, 30); doc.setFont('helvetica', 'bold');
+    doc.text(obra.nome || '', ML + 14, y); y += 6;
+    if ((obra.info && obra.info.clienteRazaoSocial) || obra.cliente) {
+      doc.setTextColor(80, 80, 80); doc.setFont('helvetica', 'normal');
+      doc.text('Cliente:', ML, y); doc.setTextColor(30, 30, 30); doc.setFont('helvetica', 'bold');
+      doc.text((obra.info && obra.info.clienteRazaoSocial) || obra.cliente || '', ML + 18, y); y += 6;
+    }
+    doc.setTextColor(80, 80, 80); doc.setFont('helvetica', 'normal');
+    var periodoStr = (obra.dataInicio ? dateBR(obra.dataInicio) : 'N/D') + '  →  Previsão: ' + (obra.dataPrevisao ? dateBR(obra.dataPrevisao) : 'N/D');
+    doc.text('Período:', ML, y); doc.setTextColor(30, 30, 30); doc.setFont('helvetica', 'bold');
+    doc.text(periodoStr, ML + 20, y); y += 6;
+    doc.setTextColor(80, 80, 80); doc.setFont('helvetica', 'normal');
+    doc.text('Gerado em:', ML, y); doc.setTextColor(30, 30, 30); doc.setFont('helvetica', 'bold');
+    doc.text(dateBR(hoje), ML + 24, y); y += 12;
+
+    // ── Semáforo ──────────────────────────────────────────────────
+    var alertas = gerarAlertasDetalhados(obra, c);
+    var alertasTipos = alertas.map(function(a) { return a.tipo; });
+    var temRed = alertasTipos.indexOf('red') !== -1;
+    var temAmber = alertasTipos.indexOf('amber') !== -1;
+
+    // Financeiro
+    var finStatus, finLabel, finRGB;
+    if (c.margem >= 20) { finStatus = 'SAUDÁVEL'; finLabel = c.margem.toFixed(1) + '%'; finRGB = [5, 150, 105]; }
+    else if (c.margem >= 10) { finStatus = 'ATENÇÃO'; finLabel = c.margem.toFixed(1) + '%'; finRGB = [217, 119, 6]; }
+    else { finStatus = c.margem >= 0 ? 'CRÍTICA' : 'PREJUÍZO'; finLabel = c.margem.toFixed(1) + '%'; finRGB = [220, 38, 38]; }
+
+    // Prazo
+    var prazoStatus, prazoLabel, prazoRGB;
+    if (obra.dataPrevisao) {
+      var diasRestantes = Math.ceil((new Date(obra.dataPrevisao + 'T12:00:00') - new Date(hoje + 'T12:00:00')) / 86400000);
+      if (diasRestantes < 0) { prazoStatus = 'VENCIDO'; prazoLabel = Math.abs(diasRestantes) + ' dias atraso'; prazoRGB = [220, 38, 38]; }
+      else if (diasRestantes <= 7) { prazoStatus = 'URGENTE'; prazoLabel = diasRestantes + ' dias restantes'; prazoRGB = [217, 119, 6]; }
+      else { prazoStatus = 'NO PRAZO'; prazoLabel = diasRestantes + ' dias restantes'; prazoRGB = [5, 150, 105]; }
+    } else { prazoStatus = 'SEM DATA'; prazoLabel = 'Não definida'; prazoRGB = [150, 150, 150]; }
+
+    // Operacional
+    var opStatus, opLabel, opRGB;
+    if (temRed) { opStatus = 'ALERTA'; opLabel = 'Problemas críticos'; opRGB = [220, 38, 38]; }
+    else if (temAmber) { opStatus = 'ATENÇÃO'; opLabel = 'Pontos de atenção'; opRGB = [217, 119, 6]; }
+    else { opStatus = 'NORMAL'; opLabel = 'Sem alertas'; opRGB = [5, 150, 105]; }
+
+    checkPage(36);
+    // Título semáforo
+    doc.setFillColor(245, 240, 250);
+    doc.rect(ML, y - 4, CW, 30, 'F');
+    doc.setDrawColor(230, 220, 240); doc.rect(ML, y - 4, CW, 30, 'S');
+    var boxW = (CW - 8) / 3;
+    var boxes = [
+      { label: 'FINANCEIRO', status: finStatus, detail: finLabel, rgb: finRGB },
+      { label: 'PRAZO', status: prazoStatus, detail: prazoLabel, rgb: prazoRGB },
+      { label: 'OPERACIONAL', status: opStatus, detail: opLabel, rgb: opRGB }
+    ];
+    boxes.forEach(function(b, i) {
+      var bx = ML + i * (boxW + 4);
+      doc.setFillColor(b.rgb[0], b.rgb[1], b.rgb[2]);
+      doc.roundedRect(bx, y - 3, boxW, 28, 2, 2, 'F');
+      doc.setTextColor(255, 255, 255);
+      doc.setFontSize(7); doc.setFont('helvetica', 'bold');
+      doc.text(b.label, bx + boxW / 2, y + 3, { align: 'center' });
+      doc.setFontSize(11); doc.setFont('helvetica', 'bold');
+      doc.text(b.status, bx + boxW / 2, y + 12, { align: 'center' });
+      doc.setFontSize(7); doc.setFont('helvetica', 'normal');
+      doc.text(b.detail, bx + boxW / 2, y + 20, { align: 'center' });
+    });
+    y += 34;
+
+    // ── 1. Saúde Financeira ────────────────────────────────────────
+    secTitle('1. SAÚDE FINANCEIRA');
+    row('Valor do contrato', brl(obra.contrato || 0));
+    row('Imposto (' + (obra.impostoPct || 0) + '%)', '- ' + brl(c.imposto));
+    row('  Diárias da equipe', brl(c.totalDiarias));
+    row('  Empreitadas', brl(c.totalEmp));
+    row('  Materiais', brl(c.totalMateriais));
+    row('  Gastos avulsos', brl(c.totalAvulsos));
+    row('Custo total operacional', brl(c.custoTotal));
+    // Lucro com cor
+    var lucroCor = c.lucro >= 0 ? [5, 150, 105] : [220, 38, 38];
+    row('LUCRO LÍQUIDO', brl(c.lucro) + '  (' + c.margem.toFixed(1) + '%)', lucroCor);
+
+    // Recebimentos
+    checkPage(20);
+    y += 2;
+    doc.setFontSize(9); doc.setFont('helvetica', 'bold'); doc.setTextColor(80, 80, 80);
+    doc.text('RECEBIMENTOS', ML + 2, y); y += 6;
+    row('Recebido até hoje', brl(c.totalRecebido), [5, 150, 105]);
+    row('Saldo a receber', brl(c.saldoReceber), c.saldoReceber > 0 ? [217, 119, 6] : [5, 150, 105]);
+
+    // Alerta de recebimentos atrasados
+    var recbAtrasados = (obra.recebimentos || []).filter(function(r) { return r.previsto === true && r.dataPrevista && r.dataPrevista < hoje; });
+    if (recbAtrasados.length > 0) {
+      var totalAtr = recbAtrasados.reduce(function(s, r) { return s + Number(r.valor || 0); }, 0);
+      checkPage(8);
+      doc.setFillColor(254, 243, 199);
+      doc.rect(ML, y - 1, CW, 7, 'F');
+      doc.setTextColor(217, 119, 6); doc.setFont('helvetica', 'bold'); doc.setFontSize(8);
+      doc.text('ATENÇÃO: ' + recbAtrasados.length + ' recebimento(s) previsto(s) em atraso — ' + brl(totalAtr), ML + 2, y + 4);
+      y += 10;
+    }
+    y += 4;
+
+    // ── 2. Saúde de Prazo ─────────────────────────────────────────
+    secTitle('2. SAÚDE DE PRAZO');
+    if (obra.dataInicio) row('Início', dateBR(obra.dataInicio));
+    if (obra.dataPrevisao) {
+      row('Previsão de entrega', dateBR(obra.dataPrevisao));
+      var dr = Math.ceil((new Date(obra.dataPrevisao + 'T12:00:00') - new Date(hoje + 'T12:00:00')) / 86400000);
+      var statusPrazoTxt = dr < 0 ? ('VENCIDO HÁ ' + Math.abs(dr) + ' DIA(S)') : (dr === 0 ? 'ENTREGA HOJE' : (dr + ' dia(s) restantes'));
+      row('Status', statusPrazoTxt, dr < 0 ? [220, 38, 38] : (dr <= 7 ? [217, 119, 6] : [5, 150, 105]));
+    } else {
+      checkPage(7);
+      doc.setTextColor(150, 150, 150); doc.setFontSize(9); doc.setFont('helvetica', 'normal');
+      doc.text('Data de previsão não cadastrada.', ML + 2, y); y += 8;
+    }
+
+    // Cronograma / etapas
+    var etapas = (obra.cronograma && obra.cronograma.etapas) || [];
+    if (etapas.length === 0) {
+      checkPage(8);
+      doc.setTextColor(150, 150, 150); doc.setFontSize(9); doc.setFont('helvetica', 'normal');
+      doc.text('Nenhum cronograma cadastrado para esta obra.', ML + 2, y); y += 10;
+    } else {
+      // Andamento geral
+      var andGeral = Math.round(etapas.reduce(function(s, e) { return s + Number(e.percentual || 0); }, 0) / etapas.length);
+      checkPage(8);
+      doc.setTextColor(80, 80, 80); doc.setFontSize(9); doc.setFont('helvetica', 'normal');
+      doc.text('Andamento geral (média das etapas):', ML + 2, y);
+      doc.setFont('helvetica', 'bold'); doc.setTextColor(115, 1, 140);
+      doc.text(andGeral + '%', PW - MR - 2, y, { align: 'right' });
+      y += 8;
+
+      // Tabela de etapas
+      checkPage(10);
+      doc.setFillColor(245, 245, 245);
+      doc.rect(ML, y - 4, CW, 7, 'F');
+      doc.setTextColor(100, 100, 100); doc.setFontSize(8); doc.setFont('helvetica', 'bold');
+      doc.text('ETAPA', ML + 2, y);
+      doc.text('%', ML + 80, y);
+      doc.text('STATUS', ML + 95, y);
+      doc.text('PREVISTO', ML + 135, y);
+      y += 5;
+      doc.setDrawColor(220, 220, 220); doc.line(ML, y - 2, PW - MR, y - 2);
+
+      etapas.forEach(function(e) {
+        // Determina status e cor
+        var atrasada = e.status !== 'concluida' && e.dataFimPrevisto && e.dataFimPrevisto < hoje;
+        var statusEtapa, corEtapa;
+        if (e.status === 'concluida') { statusEtapa = 'CONCLUÍDA'; corEtapa = [5, 150, 105]; }
+        else if (e.status === 'em_andamento' && atrasada) { statusEtapa = 'EM ANDAMENTO [ATRASADA]'; corEtapa = [220, 38, 38]; }
+        else if (e.status === 'em_andamento') { statusEtapa = 'EM ANDAMENTO'; corEtapa = [217, 119, 6]; }
+        else if (atrasada) { statusEtapa = 'NÃO INICIADA [ATRASADA]'; corEtapa = [220, 38, 38]; }
+        else { statusEtapa = 'NÃO INICIADA'; corEtapa = [150, 150, 150]; }
+
+        doc.setFont('helvetica', 'bold'); doc.setFontSize(8.5);
+        var nomeLines = doc.splitTextToSize(e.nome || '', 75);
+        doc.setFont('helvetica', 'normal'); doc.setFontSize(7.5);
+        var rowH = Math.max(8, nomeLines.length * 6 + 3);
+
+        checkPage(rowH + 2);
+        doc.setTextColor(60, 60, 60); doc.setFont('helvetica', 'bold'); doc.setFontSize(8.5);
+        doc.text(nomeLines[0] || '', ML + 2, y);
+        if (nomeLines.length > 1) doc.text(nomeLines[1], ML + 2, y + 6);
+        doc.setFont('helvetica', 'normal'); doc.setFontSize(8.5);
+        doc.setTextColor(115, 1, 140);
+        doc.text((e.percentual || 0) + '%', ML + 80, y);
+        doc.setTextColor(corEtapa[0], corEtapa[1], corEtapa[2]);
+        doc.setFontSize(7.5);
+        doc.text(statusEtapa, ML + 95, y);
+        doc.setTextColor(100, 100, 100); doc.setFontSize(7.5); doc.setFont('helvetica', 'normal');
+        var prevStr = (e.dataInicioPrevisto ? dateBR(e.dataInicioPrevisto) : '?') + ' → ' + (e.dataFimPrevisto ? dateBR(e.dataFimPrevisto) : '?');
+        doc.text(prevStr, ML + 135, y);
+        y += rowH;
+        doc.setDrawColor(240, 240, 240); doc.line(ML, y - 1, PW - MR, y - 1);
+      });
+
+      // Resumo etapas
+      var nConc = etapas.filter(function(e) { return e.status === 'concluida'; }).length;
+      var nAnd = etapas.filter(function(e) { return e.status === 'em_andamento'; }).length;
+      var nNao = etapas.filter(function(e) { return e.status === 'nao_iniciada'; }).length;
+      checkPage(8);
+      doc.setTextColor(80, 80, 80); doc.setFontSize(8); doc.setFont('helvetica', 'normal');
+      doc.text('Resumo: ' + nConc + ' concluída(s) · ' + nAnd + ' em andamento · ' + nNao + ' não iniciada(s)', ML + 2, y + 4);
+      y += 10;
+    }
+    y += 4;
+
+    // ── 3. Saúde Operacional ──────────────────────────────────────
+    secTitle('3. SAÚDE OPERACIONAL');
+    var nDiarias = (obra.diarias || []).length;
+    var nEmps = (obra.empreitadas || []).length;
+    var nMats = (obra.materiais || []).length;
+    var nAvulsos = (obra.gastosAvulsos || []).length;
+    row('Diárias lançadas (' + nDiarias + ')', brl(c.totalDiarias));
+    row('Empreitadas (' + nEmps + ')', brl(c.totalEmp));
+    row('Materiais (' + nMats + ' itens)', brl(c.totalMateriais));
+    row('Gastos avulsos (' + nAvulsos + ')', brl(c.totalAvulsos));
+    y += 4;
+
+    // ── 4. Alertas ativos ─────────────────────────────────────────
+    secTitle('4. ALERTAS ATIVOS');
+    if (alertas.length === 0) {
+      checkPage(8);
+      doc.setTextColor(5, 150, 105); doc.setFontSize(9); doc.setFont('helvetica', 'bold');
+      doc.text('Nenhum alerta ativo.', ML + 2, y); y += 10;
+    } else {
+      var tipoCor = { red: [220, 38, 38], amber: [217, 119, 6], green: [5, 150, 105] };
+      var tipoLabel = { red: 'VERMELHO', amber: 'ÂMBAR', green: 'VERDE' };
+      alertas.forEach(function(a) {
+        doc.setFont('helvetica', 'bold'); doc.setFontSize(8);
+        var titLines = doc.splitTextToSize(a.titulo, CW - 50);
+        var rowH = Math.max(8, titLines.length * 5 + 3);
+        checkPage(rowH + 2);
+        var cor = tipoCor[a.tipo] || [80, 80, 80];
+        // Fundo leve
+        var bgAlpha = a.tipo === 'red' ? [255, 235, 235] : (a.tipo === 'amber' ? [255, 249, 230] : [230, 250, 243]);
+        doc.setFillColor(bgAlpha[0], bgAlpha[1], bgAlpha[2]);
+        doc.rect(ML, y - 4, CW, rowH, 'F');
+        doc.setTextColor(cor[0], cor[1], cor[2]);
+        doc.setFontSize(7); doc.setFont('helvetica', 'bold');
+        doc.text('[' + (tipoLabel[a.tipo] || a.tipo.toUpperCase()) + ']', ML + 2, y);
+        doc.setTextColor(30, 30, 30); doc.setFont('helvetica', 'bold'); doc.setFontSize(8.5);
+        doc.text(titLines[0] || '', ML + 28, y);
+        if (titLines.length > 1) doc.text(titLines[1], ML + 28, y + 5);
+        if (a.valor) {
+          doc.setTextColor(cor[0], cor[1], cor[2]); doc.setFont('helvetica', 'bold'); doc.setFontSize(8);
+          doc.text(a.valor, PW - MR - 2, y, { align: 'right' });
+        }
+        y += rowH + 2;
+      });
+    }
+    y += 4;
+
+    addFooter();
+    var slug = (obra.nome || 'obra').toLowerCase().replace(/[^a-z0-9]+/g, '-').slice(0, 30);
+    doc.save('saude-obra-' + slug + '-' + hoje + '.pdf');
   }
 
   function inicializarAtmosphera() {
