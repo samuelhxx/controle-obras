@@ -1049,7 +1049,14 @@
     html += '<div class="linha"><div class="linha-label">(-) Imposto (' + (o.impostoPct || 0) + '%)</div><div class="linha-valor">- ' + brl(c.imposto) + '</div></div>';
     html += '<div class="divider-purple"><div class="lucro-row"><div class="lucro-label">LUCRO LÍQUIDO</div>';
     html += '<div class="lucro-valor ' + (c.lucro >= 0 ? 'positive' : 'negative') + '">' + brl(c.lucro) + '</div></div>';
-    html += '<div class="margem">Margem: ' + c.margem.toFixed(1) + '%</div></div></div>';
+    html += '<div class="margem">Margem real: ' + c.margem.toFixed(1) + '%</div>';
+    html += '<div style="display:flex;align-items:center;gap:6px;margin-top:10px;padding-top:10px;border-top:1px dashed rgba(0,0,0,0.08);">';
+    html += '<span style="font-size:12px;color:var(--ink-3);flex:1;">Margem prevista</span>';
+    html += '<input type="number" id="resumo-margem-prevista" value="' + (o.margemPrevista || '') + '"'
+          + ' placeholder="%" min="0" max="100" style="width:58px;padding:4px 8px;font-size:13px;border-radius:8px;border:1.5px solid rgba(0,0,0,0.1);background:var(--bg);font-family:inherit;text-align:right;">';
+    html += '<span style="font-size:13px;color:var(--ink-3);">%</span>';
+    html += '<button onclick="salvarMargemPrevista()" style="padding:4px 10px;font-size:12px;border-radius:8px;border:1.5px solid rgba(115,1,140,0.3);background:none;color:var(--purple);cursor:pointer;font-family:inherit;white-space:nowrap;">Salvar</button>';
+    html += '</div></div></div>';
 
     html += '</div>';
     html += '<div style="margin-top:8px;">';
@@ -1467,6 +1474,7 @@
     html += '<label class="field-label">Cliente</label><input type="text" id="ed-cliente" value="' + escapeHtml(o.cliente || '') + '">';
     html += '<label class="field-label">Valor do contrato (R$)</label><input type="text" inputmode="decimal" id="ed-contrato" value="' + (o.contrato || 0) + '">';
     html += '<label class="field-label">Imposto (%)</label><input type="text" inputmode="decimal" id="ed-imposto" value="' + (o.impostoPct || 0) + '">';
+    html += '<label class="field-label">Margem prevista (%)</label><input type="number" id="ed-margem-prevista" value="' + (o.margemPrevista || '') + '" placeholder="Ex: 20" min="0" max="100" inputmode="decimal">';
 
     html += '<label class="field-label">Status da obra</label><select id="ed-status">';
     STATUS_OBRA.forEach(s => {
@@ -1515,6 +1523,7 @@
       '<label class="field-label">Cliente</label><input type="text" id="nova-cliente" placeholder="Ex.: Complexo Atmosphera">' +
       '<label class="field-label">Valor do contrato (R$) *</label><input type="text" inputmode="decimal" id="nova-contrato" placeholder="Ex.: 96000">' +
       '<label class="field-label">Imposto (%)</label><input type="text" inputmode="decimal" id="nova-imposto" value="13">' +
+      '<label class="field-label">Margem prevista (%)</label><input type="number" id="nova-margem-prevista" placeholder="Ex: 20" min="0" max="100" inputmode="decimal">' +
       '<label class="field-label">Data de início</label><input type="date" id="nova-inicio">' +
       '<label class="field-label">Previsão de término</label><input type="date" id="nova-previsao">' +
       '<div class="modal-actions">' +
@@ -1540,6 +1549,7 @@
       cliente: document.getElementById('nova-cliente').value.trim(),
       contrato: contrato,
       impostoPct: parseNum(document.getElementById('nova-imposto').value),
+      margemPrevista: (function() { var v = parseNum(document.getElementById('nova-margem-prevista').value); return (v > 0 && v <= 100) ? v : null; })(),
       dataInicio: document.getElementById('nova-inicio').value,
       dataPrevisao: document.getElementById('nova-previsao').value,
       status: 'andamento',
@@ -1923,6 +1933,8 @@
     obra.cliente = document.getElementById('ed-cliente').value.trim();
     obra.contrato = contrato;
     obra.impostoPct = parseNum(document.getElementById('ed-imposto').value);
+    const mpEd = parseNum(document.getElementById('ed-margem-prevista').value);
+    obra.margemPrevista = (mpEd > 0 && mpEd <= 100) ? mpEd : null;
     obra.status = document.getElementById('ed-status').value;
     obra.dataInicio = document.getElementById('ed-inicio').value;
     obra.dataPrevisao = document.getElementById('ed-previsao').value;
@@ -6155,6 +6167,15 @@
     doc.save('andamento-' + slug + '-' + hoje + '.pdf');
   }
 
+  function salvarMargemPrevista() {
+    var obra = getObra(obraAtualId);
+    if (!obra) return;
+    var v = parseNum(document.getElementById('resumo-margem-prevista').value);
+    obra.margemPrevista = (v > 0 && v <= 100) ? v : null;
+    salvar();
+    toast('Margem prevista salva');
+  }
+
   // ============ RELATÓRIO DE SAÚDE DA OBRA ============
 
   function gerarPDFSaude() {
@@ -6259,11 +6280,12 @@
     var temRed = alertasTipos.indexOf('red') !== -1;
     var temAmber = alertasTipos.indexOf('amber') !== -1;
 
-    // Financeiro
+    // Financeiro — usa margemPrevista se definida, caso contrário margem real
+    var margemRef = (obra.margemPrevista != null) ? obra.margemPrevista : c.margem;
     var finStatus, finLabel, finRGB;
-    if (c.margem >= 20) { finStatus = 'SAUDÁVEL'; finLabel = c.margem.toFixed(1) + '%'; finRGB = [5, 150, 105]; }
-    else if (c.margem >= 10) { finStatus = 'ATENÇÃO'; finLabel = c.margem.toFixed(1) + '%'; finRGB = [217, 119, 6]; }
-    else { finStatus = c.margem >= 0 ? 'CRÍTICA' : 'PREJUÍZO'; finLabel = c.margem.toFixed(1) + '%'; finRGB = [220, 38, 38]; }
+    if (margemRef >= 20) { finStatus = 'SAUDÁVEL'; finLabel = margemRef.toFixed(1) + '%'; finRGB = [5, 150, 105]; }
+    else if (margemRef >= 10) { finStatus = 'ATENÇÃO'; finLabel = margemRef.toFixed(1) + '%'; finRGB = [217, 119, 6]; }
+    else { finStatus = margemRef >= 0 ? 'CRÍTICA' : 'PREJUÍZO'; finLabel = margemRef.toFixed(1) + '%'; finRGB = [220, 38, 38]; }
 
     // Prazo
     var prazoStatus, prazoLabel, prazoRGB;
@@ -6307,23 +6329,27 @@
 
     // ── 1. Saúde Financeira ────────────────────────────────────────
     secTitle('1. SAÚDE FINANCEIRA');
-    row('Valor do contrato', brl(obra.contrato || 0));
-    row('Imposto (' + (obra.impostoPct || 0) + '%)', '- ' + brl(c.imposto));
+
+    // Sub-título RESULTADO PARCIAL
+    checkPage(8);
+    doc.setFillColor(240, 240, 240);
+    doc.rect(ML, y - 3, CW, 7, 'F');
+    doc.setTextColor(60, 60, 60); doc.setFontSize(8); doc.setFont('helvetica', 'bold');
+    doc.text('RESULTADO PARCIAL (até hoje)', ML + 2, y + 1); y += 8;
+
+    row('Custos lançados', brl(c.custoTotal));
     row('  Diárias da equipe', brl(c.totalDiarias));
     row('  Empreitadas', brl(c.totalEmp));
     row('  Materiais', brl(c.totalMateriais));
     row('  Gastos avulsos', brl(c.totalAvulsos));
-    row('Custo total operacional', brl(c.custoTotal));
-    // Lucro com cor
-    var lucroCor = c.lucro >= 0 ? [5, 150, 105] : [220, 38, 38];
-    row('LUCRO LÍQUIDO', brl(c.lucro) + '  (' + c.margem.toFixed(1) + '%)', lucroCor);
-
-    // Recebimentos
-    checkPage(20);
-    y += 2;
-    doc.setFontSize(9); doc.setFont('helvetica', 'bold'); doc.setTextColor(80, 80, 80);
-    doc.text('RECEBIMENTOS', ML + 2, y); y += 6;
     row('Recebido até hoje', brl(c.totalRecebido), [5, 150, 105]);
+    var impostoParcial = c.totalRecebido * (Number(obra.impostoPct || 0) / 100);
+    row('Imposto s/ recebido (' + (obra.impostoPct || 0) + '%)', '- ' + brl(impostoParcial));
+    var resultadoParcial = c.totalRecebido - c.custoTotal - impostoParcial;
+    var parCor = resultadoParcial >= 0 ? [5, 150, 105] : [220, 38, 38];
+    row('RESULTADO PARCIAL', brl(resultadoParcial), parCor);
+
+    // Saldo a receber
     row('Saldo a receber', brl(c.saldoReceber), c.saldoReceber > 0 ? [217, 119, 6] : [5, 150, 105]);
 
     // Alerta de recebimentos atrasados
@@ -6336,6 +6362,30 @@
       doc.setTextColor(217, 119, 6); doc.setFont('helvetica', 'bold'); doc.setFontSize(8);
       doc.text('ATENÇÃO: ' + recbAtrasados.length + ' recebimento(s) previsto(s) em atraso — ' + brl(totalAtr), ML + 2, y + 4);
       y += 10;
+    }
+    y += 6;
+
+    // Sub-título RESULTADO PROJETADO
+    checkPage(8);
+    doc.setFillColor(240, 240, 240);
+    doc.rect(ML, y - 3, CW, 7, 'F');
+    doc.setTextColor(60, 60, 60); doc.setFontSize(8); doc.setFont('helvetica', 'bold');
+    doc.text('RESULTADO PROJETADO (fim da obra)', ML + 2, y + 1); y += 8;
+
+    if (obra.margemPrevista != null) {
+      var receitaLiquida = Number(obra.contrato || 0) * (1 - Number(obra.impostoPct || 0) / 100);
+      var lucroProjetado = receitaLiquida * (obra.margemPrevista / 100);
+      var custoTotalPrevisto = receitaLiquida - lucroProjetado;
+      row('Receita do contrato', brl(obra.contrato || 0));
+      row('(-) Imposto (' + (obra.impostoPct || 0) + '%)', '- ' + brl(c.imposto));
+      row('Receita líquida', brl(receitaLiquida));
+      row('Custo total previsto', brl(custoTotalPrevisto));
+      var projCor = lucroProjetado >= 0 ? [5, 150, 105] : [220, 38, 38];
+      row('LUCRO PROJETADO', brl(lucroProjetado) + '  (' + obra.margemPrevista.toFixed(0) + '%)', projCor);
+    } else {
+      checkPage(8);
+      doc.setTextColor(150, 150, 150); doc.setFontSize(8.5); doc.setFont('helvetica', 'normal');
+      doc.text('Cadastre a margem prevista na aba Resumo para ver o resultado projetado.', ML + 2, y); y += 10;
     }
     y += 4;
 
