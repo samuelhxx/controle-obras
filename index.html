@@ -6373,15 +6373,15 @@
     doc.text('RESULTADO PROJETADO (fim da obra)', ML + 2, y + 1); y += 8;
 
     if (obra.margemPrevista != null) {
-      var receitaLiquida = Number(obra.contrato || 0) * (1 - Number(obra.impostoPct || 0) / 100);
-      var lucroProjetado = receitaLiquida * (obra.margemPrevista / 100);
-      var custoTotalPrevisto = receitaLiquida - lucroProjetado;
+      var lucroProjetado = Number(obra.contrato || 0) * (obra.margemPrevista / 100);
+      var custoTotalPrevisto = Number(obra.contrato || 0) - lucroProjetado;
       row('Receita do contrato', brl(obra.contrato || 0));
-      row('(-) Imposto (' + (obra.impostoPct || 0) + '%)', '- ' + brl(c.imposto));
-      row('Receita líquida', brl(receitaLiquida));
-      row('Custo total previsto', brl(custoTotalPrevisto));
       var projCor = lucroProjetado >= 0 ? [5, 150, 105] : [220, 38, 38];
-      row('LUCRO PROJETADO', brl(lucroProjetado) + '  (' + obra.margemPrevista.toFixed(0) + '%)', projCor);
+      row('Lucro projetado (' + obra.margemPrevista.toFixed(0) + '% do contrato)', brl(lucroProjetado), projCor);
+      row('CUSTO TOTAL PREVISTO', brl(custoTotalPrevisto), [80, 80, 80]);
+      checkPage(8);
+      doc.setTextColor(150, 150, 150); doc.setFontSize(7.5); doc.setFont('helvetica', 'normal');
+      doc.text('Custo total previsto inclui impostos e todos os custos de execução.', ML + 2, y); y += 8;
     } else {
       checkPage(8);
       doc.setTextColor(150, 150, 150); doc.setFontSize(8.5); doc.setFont('helvetica', 'normal');
