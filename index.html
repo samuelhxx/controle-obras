@@ -187,6 +187,23 @@
   .two-col-layout > * { margin-bottom: 0; }
   .resumo-cols > * { margin-bottom: 0; }
 
+  .kanban { display: flex; flex-direction: column; gap: 14px; margin-top: 16px; }
+  .kanban-col { background: var(--surface); border-radius: var(--radius-card); box-shadow: var(--shadow-card); padding: 14px; border-top: 4px solid var(--purple); }
+  .kanban-col-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+  .kanban-col-title { font-size: 13px; font-weight: 700; letter-spacing: 0.5px; text-transform: uppercase; }
+  .kanban-col-count { font-size: 12px; color: var(--ink-3); font-weight: 600; }
+  .kanban-card { background: var(--bg); border-radius: 12px; padding: 12px; margin-bottom: 10px; }
+  .kanban-card:last-child { margin-bottom: 0; }
+  .kanban-nome { font-weight: 700; font-size: 14px; color: var(--ink); }
+  .kanban-info { font-size: 12px; color: var(--ink-2); margin-top: 2px; }
+  .kanban-valor { font-size: 15px; font-weight: 700; color: var(--purple); margin-top: 6px; }
+  .kanban-obs { font-size: 12px; color: var(--ink-3); margin-top: 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .kanban-actions { display: flex; gap: 6px; margin-top: 10px; }
+  .kanban-btn { flex: 1; background: var(--surface); border: 1px solid rgba(115,1,140,0.2); color: var(--purple); border-radius: 8px; padding: 6px 0; font-size: 13px; font-weight: 600; cursor: pointer; font-family: inherit; }
+  .kanban-btn:disabled { opacity: 0.3; cursor: default; }
+  .kanban-btn.danger { color: var(--red); border-color: rgba(220,38,38,0.2); }
+  .kanban-empty { font-size: 12px; color: var(--ink-4); text-align: center; padding: 8px 0; }
+
   @media (hover: hover) {
     .obra-card:hover { transform: translateY(-3px); box-shadow: var(--shadow-float); }
     .btn-primary:hover { background: var(--purple-dim); transform: translateY(-1px); box-shadow: 0 4px 16px rgba(115,1,140,0.25); }
@@ -206,6 +223,8 @@
     .obras-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
     .home-actions { flex-direction: row; gap: 12px; }
     .home-actions .btn-primary, .home-actions .btn-secondary { width: auto; flex: 1; }
+    .kanban { flex-direction: row; overflow-x: auto; align-items: flex-start; padding-bottom: 8px; }
+    .kanban-col { flex: 0 0 260px; }
     .two-col-layout { display: grid; grid-template-columns: 1fr 1.3fr; gap: 16px; align-items: start; }
     .resumo-cols { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
     .resumo-cols > :last-child { grid-column: 1 / -1; }
@@ -675,6 +694,7 @@
   const KEY_IA = 'asConstruction_apiKey';
   const KEY_THEME = 'asConstruction_theme';
   const KEY_ORC = 'asConstruction_orcamentos_v1';
+  const KEY_PIPELINE = 'asConstruction_pipeline_v1';
   let temaEscuro = localStorage.getItem(KEY_THEME) === 'dark';
   if (temaEscuro) document.documentElement.setAttribute('data-theme', 'dark');
   let chatMensagens = [];
@@ -697,6 +717,8 @@
 
   let estado = carregar();
   let orcamentos = carregarOrcamentos();
+  let pipeline = carregarPipeline();
+  let pipelineEditandoId = null;
   let usuarioAtual = null;
   let _firestoreHadData = false;
   let telaAtual = 'home';
@@ -833,6 +855,8 @@
       root.innerHTML = renderPainel();
     } else if (telaAtual === 'calculadora') {
       root.innerHTML = renderCalculadora();
+    } else if (telaAtual === 'pipeline') {
+      root.innerHTML = renderPipeline();
     } else if (telaAtual === 'login') {
       root.innerHTML = renderTelaLogin();
     }
@@ -880,6 +904,7 @@
     html += '<button class="btn-secondary" onclick="abrirPainel()">Painel Comparativo</button>';
     html += '<button class="btn-secondary" onclick="abrirBackup()">Backup / Restaurar</button>';
     html += '<button class="btn-secondary" onclick="abrirCalculadora()">Calculadora</button>';
+    html += '<button class="btn-secondary" onclick="abrirPipeline()">Pipeline Comercial</button>';
     html += '</div>';
 
     if (estado.obras.length === 0) {
@@ -3140,6 +3165,175 @@
     addFooter();
     const trabNomeSlug = relatorioTrabId === 'todos' ? 'equipe' : (grupos[relatorioTrabId]?.nome || 'trabalhador').replace(/\s+/g, '-').toLowerCase();
     doc.save('relatorio-' + trabNomeSlug + '-' + filenameSuffix + '.pdf');
+  }
+
+  // ============ PIPELINE COMERCIAL (CRM) ============
+  const ESTAGIOS_PIPELINE = [
+    { id: 'contato',    nome: 'Primeiro Contato', cor: '#2563EB' },
+    { id: 'proposta',   nome: 'Proposta Enviada', cor: '#D97706' },
+    { id: 'negociando', nome: 'Negociando',       cor: '#73018C' },
+    { id: 'fechado',    nome: 'Fechado',          cor: '#059669' },
+    { id: 'perdido',    nome: 'Perdido',          cor: '#DC2626' }
+  ];
+
+  function carregarPipeline() {
+    try {
+      const raw = localStorage.getItem(KEY_PIPELINE);
+      if (raw) return JSON.parse(raw);
+    } catch(e) {}
+    return [];
+  }
+
+  function salvarPipeline() {
+    try {
+      localStorage.setItem(KEY_PIPELINE, JSON.stringify(pipeline));
+    } catch(e) {
+      alert('Erro ao salvar pipeline: ' + e.message);
+    }
+  }
+
+  function abrirPipeline() {
+    telaAtual = 'pipeline';
+    render();
+    window.scrollTo(0, 0);
+  }
+
+  function renderPipeline() {
+    let html = '<div class="header">';
+    html += '<div class="header-left">';
+    html += '<div class="header-title obra-title">Pipeline Comercial</div>';
+    html += '</div>';
+    html += '<button class="btn-theme" onclick="toggleTema()" title="Alternar tema">' + (temaEscuro ? '☀' : '◑') + '</button>';
+    html += '<button class="btn-back" onclick="voltarHome()">← Voltar</button>';
+    html += '</div>';
+
+    const abertosIds = ['contato', 'proposta', 'negociando'];
+    let qtdAbertos = 0, somaAbertos = 0;
+    pipeline.forEach(n => {
+      if (abertosIds.indexOf(n.estagio) !== -1) { qtdAbertos++; somaAbertos += Number(n.valorEstimado || 0); }
+    });
+
+    html += '<div class="card resultado">';
+    html += '<div class="card-title">RESUMO DO PIPELINE</div>';
+    html += '<div class="linha"><div class="linha-label">Negócios em aberto</div><div class="linha-valor">' + qtdAbertos + ' negócio(s)</div></div>';
+    html += '<div class="linha"><div class="linha-label">Valor em aberto</div><div class="linha-valor" style="color:#73018C">' + brl(somaAbertos) + '</div></div>';
+    ESTAGIOS_PIPELINE.forEach(est => {
+      const doEstagio = pipeline.filter(n => n.estagio === est.id);
+      const soma = doEstagio.reduce((s, n) => s + Number(n.valorEstimado || 0), 0);
+      html += '<div class="linha"><div class="linha-label"><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:' + est.cor + ';margin-right:6px;"></span>' + est.nome + ' (' + doEstagio.length + ')</div><div class="linha-valor">' + brl(soma) + '</div></div>';
+    });
+    html += '</div>';
+
+    html += '<button class="btn-primary" onclick="abrirModalNegocio()">+ Novo Negócio</button>';
+
+    html += '<div class="kanban">';
+    ESTAGIOS_PIPELINE.forEach((est, estIdx) => {
+      const doEstagio = pipeline.filter(n => n.estagio === est.id);
+      html += '<div class="kanban-col" style="border-top-color:' + est.cor + '">';
+      html += '<div class="kanban-col-head">';
+      html += '<div class="kanban-col-title" style="color:' + est.cor + '">' + est.nome + '</div>';
+      html += '<div class="kanban-col-count">' + doEstagio.length + '</div>';
+      html += '</div>';
+      if (doEstagio.length === 0) {
+        html += '<div class="kanban-empty">Nenhum negócio</div>';
+      }
+      doEstagio.forEach(n => {
+        html += '<div class="kanban-card">';
+        html += '<div class="kanban-nome">' + escapeHtml(n.nomeCliente) + '</div>';
+        if (n.contato) html += '<div class="kanban-info">' + escapeHtml(n.contato) + '</div>';
+        if (n.telefoneEmail) html += '<div class="kanban-info">' + escapeHtml(n.telefoneEmail) + '</div>';
+        html += '<div class="kanban-valor">' + brl(n.valorEstimado || 0) + '</div>';
+        if (n.dataUltimoContato) html += '<div class="kanban-info">Último contato: ' + dateBR(n.dataUltimoContato) + '</div>';
+        if (n.proximaAcao) html += '<div class="kanban-info"><strong>Próxima ação:</strong> ' + escapeHtml(n.proximaAcao) + '</div>';
+        if (n.observacoes) html += '<div class="kanban-obs" title="' + escapeHtml(n.observacoes) + '">' + escapeHtml(n.observacoes) + '</div>';
+        html += '<div class="kanban-actions">';
+        html += '<button class="kanban-btn" onclick="moverNegocio(\'' + n.id + '\', -1)"' + (estIdx === 0 ? ' disabled' : '') + ' title="Estágio anterior">←</button>';
+        html += '<button class="kanban-btn" onclick="moverNegocio(\'' + n.id + '\', 1)"' + (estIdx === ESTAGIOS_PIPELINE.length - 1 ? ' disabled' : '') + ' title="Próximo estágio">→</button>';
+        html += '<button class="kanban-btn" onclick="abrirModalNegocio(\'' + n.id + '\')" title="Editar">✎</button>';
+        html += '<button class="kanban-btn danger" onclick="excluirNegocio(\'' + n.id + '\')" title="Excluir">✕</button>';
+        html += '</div>';
+        html += '</div>';
+      });
+      html += '</div>';
+    });
+    html += '</div>';
+
+    return html;
+  }
+
+  function abrirModalNegocio(id) {
+    pipelineEditandoId = id || null;
+    const n = id ? pipeline.find(x => x.id === id) : null;
+    let selEstagio = '<select id="neg-estagio">';
+    ESTAGIOS_PIPELINE.forEach(est => {
+      const sel = (n ? n.estagio : 'contato') === est.id ? ' selected' : '';
+      selEstagio += '<option value="' + est.id + '"' + sel + '>' + est.nome + '</option>';
+    });
+    selEstagio += '</select>';
+    const valorTxt = n && n.valorEstimado ? String(n.valorEstimado).replace('.', ',') : '';
+    const html = '<div class="modal-title">' + (n ? 'Editar Negócio' : 'Novo Negócio') + '</div>' +
+      '<label class="field-label">Nome do cliente (empresa) *</label><input type="text" id="neg-nome" placeholder="Ex.: Construtora Alfa" value="' + (n ? escapeHtml(n.nomeCliente) : '') + '">' +
+      '<label class="field-label">Contato (pessoa)</label><input type="text" id="neg-contato" placeholder="Ex.: João" value="' + (n ? escapeHtml(n.contato || '') : '') + '">' +
+      '<label class="field-label">Telefone / e-mail</label><input type="text" id="neg-tel" placeholder="Ex.: (11) 99999-9999" value="' + (n ? escapeHtml(n.telefoneEmail || '') : '') + '">' +
+      '<label class="field-label">Valor estimado (R$)</label><input type="text" inputmode="decimal" id="neg-valor" placeholder="Ex.: 50000" value="' + valorTxt + '">' +
+      '<label class="field-label">Estágio</label>' + selEstagio +
+      '<label class="field-label">Data do último contato</label><input type="date" id="neg-data" value="' + (n ? (n.dataUltimoContato || '') : hojeISO()) + '">' +
+      '<label class="field-label">Próxima ação</label><input type="text" id="neg-acao" placeholder="Ex.: Ligar na sexta" value="' + (n ? escapeHtml(n.proximaAcao || '') : '') + '">' +
+      '<label class="field-label">Observações</label><textarea id="neg-obs" rows="3" placeholder="Anotações livres">' + (n ? escapeHtml(n.observacoes || '') : '') + '</textarea>' +
+      '<div class="modal-actions">' +
+        '<button class="btn-cancel" onclick="fecharModal()">Cancelar</button>' +
+        '<button class="btn-primary" style="margin-top:0" onclick="salvarNegocio()">' + (n ? 'Salvar' : 'Criar') + '</button>' +
+      '</div>';
+    document.getElementById('modal-content').innerHTML = html;
+    document.getElementById('modal-bg').classList.add('show');
+  }
+
+  function salvarNegocio() {
+    const nome = document.getElementById('neg-nome').value.trim();
+    if (!nome) { alert('Informe o nome do cliente.'); return; }
+    const dados = {
+      nomeCliente: nome,
+      contato: document.getElementById('neg-contato').value.trim(),
+      telefoneEmail: document.getElementById('neg-tel').value.trim(),
+      valorEstimado: parseNum(document.getElementById('neg-valor').value),
+      estagio: document.getElementById('neg-estagio').value,
+      dataUltimoContato: document.getElementById('neg-data').value,
+      proximaAcao: document.getElementById('neg-acao').value.trim(),
+      observacoes: document.getElementById('neg-obs').value.trim()
+    };
+    if (pipelineEditandoId) {
+      const n = pipeline.find(x => x.id === pipelineEditandoId);
+      if (n) Object.assign(n, dados);
+    } else {
+      dados.id = 'neg_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6);
+      pipeline.push(dados);
+    }
+    salvarPipeline();
+    pipelineEditandoId = null;
+    fecharModal();
+    render();
+    toast('Negócio salvo');
+  }
+
+  function excluirNegocio(id) {
+    const n = pipeline.find(x => x.id === id);
+    if (!n) return;
+    if (!confirm('Excluir o negócio "' + n.nomeCliente + '"?')) return;
+    pipeline = pipeline.filter(x => x.id !== id);
+    salvarPipeline();
+    render();
+    toast('Negócio excluído');
+  }
+
+  function moverNegocio(id, dir) {
+    const n = pipeline.find(x => x.id === id);
+    if (!n) return;
+    const idx = ESTAGIOS_PIPELINE.findIndex(e => e.id === n.estagio);
+    const novo = idx + dir;
+    if (novo < 0 || novo >= ESTAGIOS_PIPELINE.length) return;
+    n.estagio = ESTAGIOS_PIPELINE[novo].id;
+    salvarPipeline();
+    render();
   }
 
   // ============ CALCULADORA ============
